@@ -119,7 +119,7 @@ running time of $O(T|\mcZ|^2)$ for the forward algorithm.
 The quadratic dependence on the number of states precludes
 scaling to extremely large state spaces.
 
-\section{Neural Parameterization}\todo{rewrite for more generality}
+\section{Kernel Parameterization}\todo{rewrite for more generality}
 Recent work in latent variable modeling with neural components has shown
 that the parameterization of conditional distributions can have a large
 effect on generalization \citep{kim2019cpcfg}. 
@@ -149,10 +149,11 @@ parameters via
 $$p(x=j \mid z=i) = \frac{K(u_i, v_j)}{\sum_{j'} K(u_i, v_{j'})},$$
 where $u_i$ and $v_j$ are the $i$th and $j$th rows of $U$ and $V$,
 and $K: \R^d \times \R^d \to \R$ is a kernel.
-There are a variety of valid kernels $K$ one could employ in practice;
+There are a variety of valid kernels $K$ one could employ;
 however, we focus on the exponential kernel, given by $K(u, v) = \exp(u^\top v)$,
-as it is widely used in practice.
+as it is widely used in practice as part of the softmax function.
 
+(turn into footnote, or experimental detail)
 Finally, a neural parameterization takes a further step in abstraction by
 parameterizing the embedding matrices $U,V$ as functions of neural networks,
 allowing for more parameter sharing.
@@ -163,13 +164,21 @@ In this work, we use the following parameterization for $f$:
 (resnet thing).
 
 Pros and cons of each, implications?
+Probably make this a subsection too.
+
+Add summarizing paragraph about the different levels of abstraction, with a picture.
+Talk about going up and down the stack?
+This way when we talk about each technique we can point
+to exactly what abstraction it operates in.
 
 \section{Kernels}
 In the previous section, we discussed three types of parameterizations: full rank,
 kernel, and neural. Both the kernel and neural parameterizations hinged on the use of
 a kernel to model the interaction between the values of random variables.
 In this section, we will discuss some background on kernels, as well as
-the implications of the choice of kernel.
+their use in obtaining an efficient inference algorithm for HMMs.\footnote{
+As we will see, the inference procedure extends to more complex models as well.
+}
 
 Kernel methods have a rich history in machine learning,
 having been applied to nonparametric regression, support vector machines, gaussian processes,
@@ -180,6 +189,13 @@ we use kernels to parameterize conditional distributions.
 However, similar scaling issues arise in both settings.
 
 \subsection{Exponential Kernels and Softmax}
+Kernels, and in particular exponential kernels, are widely used to parameterize 
+conditional distributions in neural networks.
+
+A kernel is a function $K: \mcX\times\mcX\to\R$ which intuitively measures
+the similarity of two elements of the domain $\mcX$.
+A kernel is positive definite symmetrics (PDS) if.
+
 Why is softmax / exponential kernel special?
 Maximum entropy distributions, exponential family.
 \href{https://www.lix.polytechnique.fr/~nielsen/CIG-slides.pdf}{Slides on information projections}
