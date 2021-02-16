@@ -89,10 +89,10 @@ This defines the joint distribution:
 \begin{equation}
 p(x,z) = \prod_t p(x_t\mid z_t) p(z_t \mid z_{t-1}),
 \end{equation}
-%where we have the transition matrix $A_{z_{t-1}z_t} = p(z_t \mid z_{t-1})$
-%and emission matrix $O_{z_tx_t} = p(x_t \mid z_t)$.
 with transitions $p(z_t \mid z_{t-1})$, emissions $p(x_t \mid z_t)$,
 and a distinguished start state $z_0 = S$.
+%where we have the transition matrix $A_{z_{t-1}z_t} = p(z_t \mid z_{t-1})$
+%and emission matrix $O_{z_tx_t} = p(x_t \mid z_t)$.
 
 Training an HMM requires marginalizing over the unobserved
 $z = (z_1,\ldots,z_T)$ in order to obtain the evidence $p(x) = \sum_z p(x,z)$,
@@ -106,39 +106,97 @@ p(x_1 \mid z_1) p(z_1 \mid z_0=S) & z_0 = S\\
 0 & \textrm{otherwise}.
 \end{cases}
 $$
-The evidence is given by
+The evidence is then given by
 \begin{equation}
 p(x) = \mathbf{1}^\top\Lambda_1\Lambda_2\cdots\Lambda_T\mathbf{1},
 \end{equation}
 where $\mathbf{1}\in\R^{|\mcZ|\times1}$ is the column vector of all ones.
 
-\section{Parameterization: Low Rank Decompositions}
-Linear
+On a serial machine, the cost of computing each matrix-vector product in
+the above equation takes time $O(|\mcZ|^2)$, resulting in a total
+running time of $O(T|\mcZ|^2)$ for the forward algorithm.
+\todo{gradient computation requires $O(T|\mcZ|^2)$ space}
+The quadratic dependence on the number of states precludes
+scaling to extremely large state spaces.
+
+\section{Neural Parameterization}\todo{rewrite for more generality}
+Recent work in latent variable modeling with neural components has shown
+that the parameterization of conditional distributions can have a large
+effect on generalization \citep{kim2019cpcfg}. 
+In particular, the use of neural parameterizations can lead to stronger
+generalization than full rank parameterizations.
+We will now make this notion more precise.
+
+Consider the emission distribution $p(x \mid z; \theta)$,
+with discrete random variables $x,z$ and model parameters $\theta$.\footnote{
+The dimension of the model parameters $\theta$ will vary depending on the choice
+of parameterization.}\footnote{
+The following parameterizations extend to the transition distribution as well,
+and any conditional distribution.}
+The full rank parameterization defines the model parameters $\theta\in\R^{|\mcZ|\times|\mcX|}$,
+giving a one-to-one correspondence between the distribution parameters and model parameters:
+$$p(x=j \mid z=i) = [\theta]_{i,j}.$$
+%Writing the emission matrix as $O$, with entries $[O]_{ij} = p(x=j\mid z=i)$,
+%we have $O = \theta$.
+
+A kernel parameterization instead defines model parameters $\theta = \set{U,V}$,
+with $U\in\R^{|\mcZ|\times d},V\in\R^{|\mcX|\times d}$,\footnote{
+Typically $U$ and $V$ are referred to as embedding matrices,
+as the embeddings of the elements of $\mcZ$ and $\mcX$ in $\R^d$ are given by 
+the rows of $U$ and $V$.
+} and obtains the distributional
+parameters via
+$$p(x=j \mid z=i) = \frac{K(u_i, v_j)}{\sum_{j'} K(u_i, v_{j'})},$$
+where $u_i$ and $v_j$ are the $i$th and $j$th rows of $U$ and $V$,
+and $K: \R^d \times \R^d \to \R$ is a kernel.
+There are a variety of valid kernels $K$ one could employ in practice;
+however, we focus on the exponential kernel, given by $K(u, v) = \exp(u^\top v)$,
+as it is widely used in practice.
+
+Finally, a neural parameterization takes a further step in abstraction by
+parameterizing the embedding matrices $U,V$ as functions of neural networks,
+allowing for more parameter sharing.
+For the embedding matrix $U\in\R^{|\mcZ|\times d}$,
+this entails having another underlying embedding matrix $U'\in\R^{|\mcZ| \times d'}$
+generating the rows $u_i = f_U(u_i')$, where the same $f_U$ is used for all $i \in \mcZ$.
+In this work, we use the following parameterization for $f$:
+(resnet thing).
+
+Pros and cons of each, implications?
 
 \section{Kernels}
-Nonlinear
-Application to features, not datapoints.
+In the previous section, we discussed three types of parameterizations: full rank,
+kernel, and neural. Both the kernel and neural parameterizations hinged on the use of
+a kernel to model the interaction between the values of random variables.
+In this section, we will discuss some background on kernels, as well as
+the implications of the choice of kernel.
 
-Hilbert space, RKHS
-Feature mapping
-Empirical Mapping?
+Kernel methods have a rich history in machine learning,
+having been applied to nonparametric regression, support vector machines, gaussian processes,
+among other models, to a large degree of success.
+In those settings, kernels are intuitively used to measure the similarity between two data points.
+A key distinction is that in our setting,
+we use kernels to parameterize conditional distributions.
+However, similar scaling issues arise in both settings.
 
-\subsection{Softmax}
+\subsection{Exponential Kernels and Softmax}
 Why is softmax / exponential kernel special?
 Maximum entropy distributions, exponential family.
 \href{https://www.lix.polytechnique.fr/~nielsen/CIG-slides.pdf}{Slides on information projections}
 Power series representation?
 
-\section{Softmax Approximations}
+\section{Kernel Approximations}
 Taylor approximation, generating functions
 
 limitations?
+\subsection{Bochner Theorem}
+\subsection{Nystrom}
 
 \section{Kernelized Inference}
 
 \section{Generalization: Kernelized Belief Propagation}
 
-\section{Spectral Methods}
+\section{Spectral Methods?}
 
 \bibliographystyle{plainnat}
 \bibliography{bib}
