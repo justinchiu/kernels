@@ -22,7 +22,22 @@
 \begin{document}
 \maketitle
 
-\abstract{Asdf}
+\abstract{
+Modern methods for language models based purely on neural networks are
+opaque and difficult to analyze,
+while alternative classical methods based on probabilistic graphical models
+are interpretable but not performant.
+We hypothesize that classical methods are not as performant because they have
+neither been scaled to similar sizes as their modern neural counterparts nor taken advantage of 
+modern parallel hardware.
+A significant barrier to scaling in classical methods is inference,
+which typically scales at best polynomially in the size of the model.
+In order to make classical methods performant while maintaining interpretability,
+we present techniques for circumventing the heavy computational costs of inference.
+We first focus on scaling one of the simplest models, hidden Markov models,
+then show our techniques generalize to more complex models, such as 
+probabilistic context-free grammars.
+}
 
 \section{Introduction}
 Neural network-based generative models have led to progress in
@@ -30,12 +45,12 @@ difficult tasks such as language modeling and machine translation.
 However, this progress comes at the cost of interpretability.
 Neural networks are flexible function approximations,
 but that flexibility results in opaque models that are difficult to analyze.
-Rather than post-hoc analysis \citep{probing}, we instead propose to explore
+Rather than post-hoc analysis \citep{tenney2019probing}, we instead propose to explore
 the space of models that are defined with interpretability in mind.
-In particular, we focus on probabilistic graphical models \citep{},
+In particular, we focus on probabilistic graphical models,
 which allow for the execution of arbitrary probabilistic queries,
 i.e. the calculation of (functions of) probability distributions
-via operations such as conditioning and marginalization \citep{koller} (simplify).
+via operations such as conditioning and marginalization \citep{koller2009probabilistic} (simplify).
 We seek to answer the question of whether we can have models that are both
 performant and interpretable.
 
@@ -72,14 +87,25 @@ Before diving into these contributions, we first review HMMs.
 
 \section{Hidden Markov Models for Language Modeling}
 Hidden Markov models (HMMs) have a rich history in natural language processing.
-Speech recognition \citep{rabiner1990tut},
+They have been used for a series of tasks, including
+speech recognition \citep{rabiner1990tut},
 part of speech tagging \citep{merialdo1994tagging}, 
 and word alignment in machine translation \citep{vogel1996hmm}.
-Have seen some use in neural attention-based models (cite posterior attention).
+They have also been used as components in neural models,
+such as in attention \citep{shankar2018posterior}.
 We focus on applying HMMs to the task of language modeling,
 where the goal is to model the tokens in a sentence $x = (x_1,\ldots,x_T)$.
 
-HMMs are cool because ?.
+HMMs are one of the simplest latent variable models for language modeling
+with a per-token latent variable.
+The simplicity is a result of the very strong conditional independence assumption:
+Every timestep has a single discrete state latent variable for representing context,
+and HMMs emit each token given only the corresponding latent state.
+Additionally, the next state is a function of only the previous state.
+These independence assumptions result in a bottleneck where all information
+must flow through the single state variable,
+causing performance to be limited by the number of states
+while also giving the model interpretability by limiting dependencies.
 
 Formally, HMMs have the following generative process:
 for each $t \in [T]$ timestep, first choose a latent state $z_t \in \mcZ$,
@@ -188,13 +214,20 @@ A key distinction is that in our setting,
 we use kernels to parameterize conditional distributions.
 However, similar scaling issues arise in both settings.
 
-\subsection{Exponential Kernels and Softmax}
-Kernels, and in particular exponential kernels, are widely used to parameterize 
-conditional distributions in neural networks.
 
 A kernel is a function $K: \mcX\times\mcX\to\R$ which intuitively measures
 the similarity of two elements of the domain $\mcX$.
 A kernel is positive definite symmetrics (PDS) if.
+
+PDS kernel to RKHS, reproducing property?
+
+
+\subsection{Exponential Kernels and Softmax}
+Kernels, and in particular exponential kernels, are widely used to parameterize 
+conditional distributions in neural networks.
+
+
+
 
 Why is softmax / exponential kernel special?
 Maximum entropy distributions, exponential family.
