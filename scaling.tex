@@ -17,6 +17,10 @@
 
 \usepackage{subcaption}
 
+\newcommand\Kexp{K_\textrm{exp}}
+\newcommand\Kphi{K_\phi}
+\newcommand\Krelu{K_\ReLU}
+
 \title{Scaling Hidden Markov Language Models}
 
 \begin{document}
@@ -174,13 +178,27 @@ a kernel is a function $K: \R^d\times\R^d\to\R$.
 Although applications that rely on the kernel trick, such as support vector machines,
 only require positive symmetric definite kernels,
 our use of kernels to define probability mass functions additionally requires
-kernels to be nonnegative, with $K: \R^d\times\R^d\to\R_+$.
+kernels to be positive, with $K: \R^d\times\R^d\to\R_+$.
 We can then replace the exponential kernel in softmax with
-an arbitrary nonnegative kernel:
+an arbitrary positive kernel:
 $$p(x \mid z) = \frac{K(\bu_z, \bv_x)}{\sum_{x'} K(\bu_z, \bv_{x'})},$$
 where we again have embeddings $\bu_z,\bv_x\in\R^d$.
-A nonnegative kernel must have a positive semidefinite kernel matrix,
-which, by the Moore-Aronszajn theorem, implies that (feature map exists RKHS).
+
+(Can include more details if necessary later, or remove)
+A positive kernel must have a positive definite kernel matrix,
+which, by the Moore-Aronszajn theorem \citep{aronszajn}, implies that there exists a 
+reproducing kernel Hilbert space (RKHS) and associated feature map.
+(insert theorem here)
+
+In the case of the exponential kernel $\Kexp$, the feature map has infinite dimension.
+This can be seen from the Taylor expansion:
+$$\exp(\bu^\top \bv) = \sum_{n=0}^\infty \frac{(\bu^\top \bv)^n}{n!},$$
+yielding a feature map of 
+$$[\phi(\bu)]_n = \frac{\prod_i}{\sqrt{n!}},$$
+for all $n\in\N$.
+one possible feature map, exists multiple valid maps
+\citep{cotter2011gausskernel}.
+
 
 Consider the emission distribution $p(x \mid z; \theta)$,
 with discrete random variables $x,z$ and model parameters $\theta$.\footnote{
@@ -226,30 +244,13 @@ Talk about going up and down the stack?
 This way when we talk about each technique we can point
 to exactly what abstraction it operates in.
 
-\section{Kernels}
-In the previous section, we discussed three types of parameterizations: full rank,
-kernel, and neural. Both the kernel and neural parameterizations hinged on the use of
-a kernel to model the interaction between the values of random variables.
-In this section, we will discuss some background on kernels, as well as
-their use in obtaining an efficient inference algorithm for HMMs.\footnote{
-As we will see, the inference procedure extends to more complex models as well.
-}
-
-
-A kernel is positive definite symmetrics (PDS) if .
-
-PDS kernel to RKHS, reproducing property?
-
-
-\subsection{Exponential Kernels and Softmax}
-Kernels, and in particular exponential kernels, are widely used to parameterize 
-conditional distributions in neural networks.
-
-
 Why is softmax / exponential kernel special?
 Maximum entropy distributions, exponential family.
 \href{https://www.lix.polytechnique.fr/~nielsen/CIG-slides.pdf}{Slides on information projections}
-Power series representation?
+Power series representation
+
+Does this apply to other kernels? Is exp special? Just has to be positive.
+Examine range of kernel?
 
 \section{Kernel Approximations}
 Taylor approximation, generating functions
@@ -268,6 +269,7 @@ limitations?
 \bibliography{bib}
 
 \begin{appendix}
+\begin{comment}
 \section{Gradient Estimator Implementation}
 In the log-semiring, addition is given by $\bigoplus = \LSE$ and multiplication
 by $\bigotimes = +$.
@@ -290,7 +292,7 @@ We then have
 &= \nabla_{\psi(x_a,x_b)} \bigoplus_t \psi(x_{t-1}, x_t)\\
 \end{aligned}
 \end{equation}
-
+\end{comment}
 
 \end{appendix}
 
