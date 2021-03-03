@@ -145,13 +145,42 @@ running time of $O(T|\mcZ|^2)$ for the forward algorithm.
 The quadratic dependence on the number of states precludes
 scaling to extremely large state spaces.
 
-\section{Kernel Parameterization}\todo{rewrite for more generality}
+\section{Kernel Parameterization}
 Recent work in latent variable modeling with neural components has shown
 that the parameterization of conditional distributions can have a large
 effect on generalization \citep{kim2019cpcfg}. 
-In particular, the use of neural parameterizations can lead to stronger
-generalization than full rank parameterizations.
-We will now make this notion more precise.
+In particular, one is able to encode different inductive biases through choices in
+parameterization.
+
+A common choice when parameterizing conditional distributions with
+neural nets is the use of softmax, which has origins in smooth
+approximations of argmax as well as the conditional max entropy problem (citations needed).
+In a conditional distribution $p(x \mid z)$, the softmax parameterization is as follows: 
+$$p(x \mid z) = \frac{\exp(\bu_z^\top \bv_x)}{\sum_{x'} \bu_z^\top \bv_{x'})},$$
+with $\bu_z,\bv_x\in\R^d$ vector-space embeddings of values of $x,z$.
+The numerator, $\exp(\bu_z^\top \bv_x)$, is an instance of a kernel,
+referred to as the exponential kernel \citep{rawat2019sampledsoftmax}.
+
+Kernel methods have a rich history in machine learning,
+having been applied to nonparametric regression, support vector machines, gaussian processes,
+among other models, to a large degree of success.
+In those settings, kernels are intuitively used to measure the similarity between two data points.
+In our setting, kernels parameterize conditional distributions,
+measuring the propensity of one random variable taking a particular value given
+the value of another.
+
+Generalizing from the exponential kernel,
+a kernel is a function $K: \R^d\times\R^d\to\R$.
+Although applications that rely on the kernel trick, such as support vector machines,
+only require positive symmetric definite kernels,
+our use of kernels to define probability mass functions additionally requires
+kernels to be nonnegative, with $K: \R^d\times\R^d\to\R_+$.
+We can then replace the exponential kernel in softmax with
+an arbitrary nonnegative kernel:
+$$p(x \mid z) = \frac{K(\bu_z, \bv_x)}{\sum_{x'} K(\bu_z, \bv_{x'})},$$
+where we again have embeddings $\bu_z,\bv_x\in\R^d$.
+A nonnegative kernel must have a positive semidefinite kernel matrix,
+which, by the Moore-Aronszajn theorem, implies that (feature map exists RKHS).
 
 Consider the emission distribution $p(x \mid z; \theta)$,
 with discrete random variables $x,z$ and model parameters $\theta$.\footnote{
@@ -206,18 +235,8 @@ their use in obtaining an efficient inference algorithm for HMMs.\footnote{
 As we will see, the inference procedure extends to more complex models as well.
 }
 
-Kernel methods have a rich history in machine learning,
-having been applied to nonparametric regression, support vector machines, gaussian processes,
-among other models, to a large degree of success.
-In those settings, kernels are intuitively used to measure the similarity between two data points.
-A key distinction is that in our setting,
-we use kernels to parameterize conditional distributions.
-However, similar scaling issues arise in both settings.
 
-
-A kernel is a function $K: \mcX\times\mcX\to\R$ which intuitively measures
-the similarity of two elements of the domain $\mcX$.
-A kernel is positive definite symmetrics (PDS) if.
+A kernel is positive definite symmetrics (PDS) if .
 
 PDS kernel to RKHS, reproducing property?
 
@@ -225,8 +244,6 @@ PDS kernel to RKHS, reproducing property?
 \subsection{Exponential Kernels and Softmax}
 Kernels, and in particular exponential kernels, are widely used to parameterize 
 conditional distributions in neural networks.
-
-
 
 
 Why is softmax / exponential kernel special?
