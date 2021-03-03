@@ -9,6 +9,7 @@
 \usepackage{hyperref}
 \usepackage{todonotes}
 \usepackage{algorithm}
+\usepackage{mathrsfs}
 
 \usepackage{appendix}
 
@@ -29,14 +30,14 @@
 \abstract{
 Modern methods for language models based purely on neural networks are
 opaque and difficult to analyze,
-while alternative classical methods based on probabilistic graphical models
+while alternative methods based on probabilistic graphical models
 are interpretable but not performant.
 We hypothesize that classical methods are not as performant because they have
 neither been scaled to similar sizes as their modern neural counterparts nor taken advantage of 
 modern parallel hardware.
 A significant barrier to scaling in classical methods is inference,
 which typically scales at best polynomially in the size of the model.
-In order to make classical methods performant while maintaining interpretability,
+In order to make probabilistic models performant while maintaining interpretability,
 we present techniques for circumventing the heavy computational costs of inference.
 We first focus on scaling one of the simplest models, hidden Markov models,
 then show our techniques generalize to more complex models, such as 
@@ -49,26 +50,31 @@ difficult tasks such as language modeling and machine translation.
 However, this progress comes at the cost of interpretability.
 Neural networks are flexible function approximations,
 but that flexibility results in opaque models that are difficult to analyze.
-Rather than post-hoc analysis \citep{tenney2019probing}, we instead propose to explore
-the space of models that are defined with interpretability in mind.
+As opposed to post-hoc analysis of models \citep{tenney2019probing},
+we instead propose to explore
+the space of models that interpretable from the start.
 In particular, we focus on probabilistic graphical models,
-which allow for the execution of arbitrary probabilistic queries,
-i.e. the calculation of (functions of) probability distributions
-via operations such as conditioning and marginalization \citep{koller2009probabilistic} (simplify).
-We seek to answer the question of whether we can have models that are both
+which allow for the execution of arbitrary probabilistic queries.
+These queries include
+the ability to calculate conditional and marginal probabilities given evidence.
+This interpretability comes at a cost.
+Performing these queries via inference is expensive in both time and space.
+The computational complexity of inference is a major impediment to scaling
+graphical models to large sizes, which we hypothesize prevents them from
+reaching the performance of neural networks.
+We seek to answer the question of whether we can have graphical models that are both
 performant and interpretable.
 
 We use language modeling as a benchmark task, as the complex 
 and sometimes long-range phenomena in natural language provides a good testbed.
-Additionally, language modeling captures import scientific and linguistic questions
-(more on this later).
+%Additionally, language modeling captures import scientific and linguistic questions.
 Language model benchmarks are currently dominated by autoregressive neural models,
 which makes it difficult to analyze what properties of language the models are
 actually capturing.
-For example, it is difficult to analyze the inner representations used
-in syntax-inspired neural language models \citep{du2020exploiting}
-(this is my own take on that paper,
-need to find a better citation). 
+%For example, it is difficult to analyze the inner representations used
+%in syntax-inspired neural language models \citep{du2020exploiting}
+%(this is my own take on that paper,
+%need to find a better citation). 
 This is an issue if the goal is to learn from models in order to answer
 scientific questions.
 
@@ -79,15 +85,14 @@ the hidden Markov model (HMM).
 HMMs posit a simple generative process, that first generates a sequence of
 latent states then the emissions.
 Additionally, HMMs make very strong conditional independence assumptions.
-Despite the simplicity and constraints of HMMs,
+Despite the simplicity of HMMs,
 they are still computationally expensive to scale
-due to the cost of marginalization.
+due to the cost of inference.
 
 In order to scale HMMs, we propose a series of choices in parameterization
 that result in computational speedups for inference in HMMs:
-sparse emission constraint, state dropout, and softmax kernel feature map approximation.
-
-Before diving into these contributions, we first review HMMs.
+sparse emission constraint, state dropout, and an efficient kernel-based softmax.
+Before diving into these techniques, we first review HMMs.
 
 \section{Hidden Markov Models for Language Modeling}
 Hidden Markov models (HMMs) have a rich history in natural language processing.
@@ -149,110 +154,105 @@ running time of $O(T|\mcZ|^2)$ for the forward algorithm.
 The quadratic dependence on the number of states precludes
 scaling to extremely large state spaces.
 
+In the following sections we will introduce techniques that
+aim to reduce the dependence of the time and space complexity
+of inference on the size of the state space.
+
 \section{Kernel Parameterization}
-Recent work in latent variable modeling with neural components has shown
-that the parameterization of conditional distributions can have a large
-effect on generalization \citep{kim2019cpcfg}. 
-In particular, one is able to encode different inductive biases through choices in
-parameterization.
+Parameterization of the probability distributions in a model affects both
+computational performance as well as generalization.
+Recent work on efficient attention in neural models shows that careful choice of parameterization
+of the softmax kernel, the main component of attention,
+results in large computational gains at little cost in accuracy
+\citep{choromanski2020performer,peng2021rfa}.
+In this section we will cover generalized softmax with kernels and the
+efficient computation of conditional expectations with generalized softmax.
 
-A common choice when parameterizing conditional distributions with
-neural nets is the use of softmax, which has origins in smooth
-approximations of argmax as well as the conditional max entropy problem (citations needed).
+Softmax is commonly used to parameterize conditional distributions in
+neural nets, and has origins in smooth
+approximations of argmax as well as the conditional max entropy problem \citep{}.
 In a conditional distribution $p(x \mid z)$, the softmax parameterization is as follows: 
-$$p(x \mid z) = \frac{\exp(\bu_z^\top \bv_x)}{\sum_{x'} \bu_z^\top \bv_{x'})},$$
-with $\bu_z,\bv_x\in\R^d$ vector-space embeddings of values of $x,z$.
-The numerator, $\exp(\bu_z^\top \bv_x)$, is an instance of a kernel,
-referred to as the exponential kernel \citep{rawat2019sampledsoftmax}.
-
-Kernel methods have a rich history in machine learning,
-having been applied to nonparametric regression, support vector machines, gaussian processes,
-among other models, to a large degree of success.
-In those settings, kernels are intuitively used to measure the similarity between two data points.
-In our setting, kernels parameterize conditional distributions,
-measuring the propensity of one random variable taking a particular value given
-the value of another.
-
-Generalizing from the exponential kernel,
-a kernel is a function $K: \R^d\times\R^d\to\R$.
-Although applications that rely on the kernel trick, such as support vector machines,
-only require positive symmetric definite kernels,
-our use of kernels to define probability mass functions additionally requires
-kernels to be positive, with $K: \R^d\times\R^d\to\R_+$.
-We can then replace the exponential kernel in softmax with
-an arbitrary positive kernel:
+$$p(x \mid z) = \frac{\exp(\bu_z^\top \bv_x)}{\sum_{x'} \exp(\bu_z^\top \bv_{x'})},$$
+with $\bu_z,\bv_x\in\R^d$ vector-space embeddings of values of $x,z$.\footnote{
+Softmax may also have a temperature parameter that rescales 
+the dot product, which we omit.
+}
+The numerator, $\exp(\bu_z^\top \bv_x)$, is the exponential kernel \citep{rawat2019sampledsoftmax}.
+Although the parameterization of softmax relies on the exponential kernel,
+we can generalize softmax to arbitrary nonnegative kernels $K: \R^d\times\R^d\to\R_+$.
+Replacing the exponential kernel in softmax with the nonnegative kernel $K$
+gives us generalized softmax,\footnote{
+The naming of generalized softmax is inspired by generalized linear models.
+}
 $$p(x \mid z) = \frac{K(\bu_z, \bv_x)}{\sum_{x'} K(\bu_z, \bv_{x'})},$$
 where we again have embeddings $\bu_z,\bv_x\in\R^d$.
 
-(Can include more details if necessary later, or remove)
-A positive kernel must have a positive definite kernel matrix,
-which, by the Moore-Aronszajn theorem \citep{aronszajn}, implies that there exists a 
-reproducing kernel Hilbert space (RKHS) and associated feature map.
-(insert theorem here)
+Kernels have a long history in machine learning,
+where they are used to extend linear classification models to nonlinear feature spaces,
+such as in support vector machines or regression.
+In those settings, kernels are intuitively used to measure the similarity between two data points,
+relying on the existence of a feature mapping in an associated reproducing kernel Hilbert space 
+for kernel functions with the finitely positive semi-definite property \citep{}.
+In our generalized softmax setting, kernels instead parameterize conditional distributions by
+measuring the propensity of one random variable taking a particular value given
+the value of another random variable.
+However, the connection to feature maps in reproducing kernel Hilbert spaces 
+is still useful.
+In particular, the existence of a feature map $\phi:\R^d\to\mathbb{F}$,
+which maps from the input space $\R^d$ to the feature space $\mathbb{F}$,
+allows us to write generalized softmax in matrix form:
+$$p(x \mid z) \propto [\phi(U)\phi(V)^\top]_{zx},$$
+where $\phi(U) = [\phi(\bu_1), \phi(\bu_2), \ldots,] \in\R^{|\mcZ|\times \dim(\mathbb{F})}$
+and $\phi(V) = [\phi(\bv_1), \phi(\bv_2), \ldots]\in\R^{|\mcX|\times \dim(\mathbb{F})}$.
+We will rely on the dimension of the feature space $\dim(\mathbb{F}) < \min(|\mcZ|,|\mcX|)$
+in order to speed up and reduce the space complexity of computing conditional expectations.
 
-In the case of the exponential kernel $\Kexp$, the feature map has infinite dimension.
+Many probabilistic queries can be written as conditional expectations.
+In particular, we can write marginalization in an HMM as a conditional expectation:
+$$p(x) = \sum_z p(x,z) = \sum_z p(z)p(x \mid z) = \Es{z}{p(x \mid z)}.$$
+Decomposing the expectation over time and examining a single timestep, we have
+$$p(x_t \mid \bx_{<t}) = \sum_{z_t} p(x_t \mid z_t)p(z_t \mid x_{<t})
+= \Es{z_t\mid x_{<t}}{p(x_t \mid z_t)}.$$
+We can use the matrix form of generalized softmax to speed up this computation.
+Let $[F]_{z_t} = p(x_t\mid z_t)$ in
+$$\Es{z_t \mid x_{<t}}{p(x_t \mid z_t)} = D\phi(U)\phi(V)^\top F$$
+
+Unfortunately, in the case of the exponential kernel, the feature space $\mathbb{F}_{\exp}$
+has infinite dimension.
 This can be seen from the Taylor expansion:
-$$\exp(\bu^\top \bv) = \sum_{n=0}^\infty \frac{(\bu^\top \bv)^n}{n!},$$
-yielding a feature map of 
-$$[\phi(\bu)]_n = \frac{\prod_i}{\sqrt{n!}},$$
-for all $n\in\N$.
-one possible feature map, exists multiple valid maps
-\citep{cotter2011gausskernel}.
+\begin{align*}
+\exp(\bu^\top \bv)
+&= \sum_{n=0}^\infty \frac{(\bu^\top \bv)^n}{n!}\\
+&= \sum_{n=0}^\infty \frac{(\sum_{i=1}^du_iv_i)^n}{n!}\\
+&= \sum_{n=0}^\infty \frac{\sum_{\mathbf{j} \in [d]^n}(\prod_{i=1}^n u_{j_i})(\prod_{i=1}^n v_{j_i})}{n!},
+\end{align*}
+where we have expanded the terms of the numerator by summing over all different orderings
+$\mathbf{j}$ of subsets of size $n$.
+This yields a feature map of 
+$$[\phi(\bu)]_{n,\mathbf{j}} = \frac{\prod_{i=1}^n u_{j_i}}{\sqrt{n!}}$$
+for all $n\in\N$.\footnote{
+Note that while this is one possible feature map, there may exist
+multiple valid feature maps.
+}
+We can therefore express the exponential kernel as an inner product of
+infinite dimensional vectors \citep{cotter2011gausskernel},
+$$\exp(\bu^\top\bv) 
+= \sum_{n=0}^\infty\sum_{\mathbf{j}\in[d]^n}[\phi(\bu)]_{n,\mathbf{j}}[\phi(\bv)]_{n,\mathbf{j}}
+= \langle \phi(\bu), \phi(\bv) \rangle,
+$$
+where the dimension of the feature space $\dim(\mathbb{F}_{\exp}) = \dim(\phi(\bu)) = \infty$.
+Since the infinite dimensional feature space of the exponential kernel is clearly larger than
+$\min(|\mcZ|,|\mcX|)$, recent work has instead turned to approximations of the exponential kernel
+based on random Fourier features
+\citep{rawat2019sampledsoftmax,choromanski2020performer,peng2021rfa}.
+These approaches use a finite-dimensional unbiased estimator of the exponential kernel.
 
-
-Consider the emission distribution $p(x \mid z; \theta)$,
-with discrete random variables $x,z$ and model parameters $\theta$.\footnote{
-The dimension of the model parameters $\theta$ will vary depending on the choice
-of parameterization.}\footnote{
-The following parameterizations extend to the transition distribution as well,
-and any conditional distribution.}
-The full rank parameterization defines the model parameters $\theta\in\R^{|\mcZ|\times|\mcX|}$,
-giving a one-to-one correspondence between the distribution parameters and model parameters:
-$$p(x=j \mid z=i) = [\theta]_{i,j}.$$
-%Writing the emission matrix as $O$, with entries $[O]_{ij} = p(x=j\mid z=i)$,
-%we have $O = \theta$.
-
-A kernel parameterization instead defines model parameters $\theta = \set{U,V}$,
-with $U\in\R^{|\mcZ|\times d},V\in\R^{|\mcX|\times d}$,\footnote{
-Typically $U$ and $V$ are referred to as embedding matrices,
-as the embeddings of the elements of $\mcZ$ and $\mcX$ in $\R^d$ are given by 
-the rows of $U$ and $V$.
-} and obtains the distributional
-parameters via
-$$p(x=j \mid z=i) = \frac{K(u_i, v_j)}{\sum_{j'} K(u_i, v_{j'})},$$
-where $u_i$ and $v_j$ are the $i$th and $j$th rows of $U$ and $V$,
-and $K: \R^d \times \R^d \to \R$ is a kernel.
-There are a variety of valid kernels $K$ one could employ;
-however, we focus on the exponential kernel, given by $K(u, v) = \exp(u^\top v)$,
-as it is widely used in practice as part of the softmax function.
-
-(turn into footnote, or experimental detail)
-Finally, a neural parameterization takes a further step in abstraction by
-parameterizing the embedding matrices $U,V$ as functions of neural networks,
-allowing for more parameter sharing.
-For the embedding matrix $U\in\R^{|\mcZ|\times d}$,
-this entails having another underlying embedding matrix $U'\in\R^{|\mcZ| \times d'}$
-generating the rows $u_i = f_U(u_i')$, where the same $f_U$ is used for all $i \in \mcZ$.
-In this work, we use the following parameterization for $f$:
-(resnet thing).
-
-Pros and cons of each, implications?
-Probably make this a subsection too.
-
-Add summarizing paragraph about the different levels of abstraction, with a picture.
-Talk about going up and down the stack?
-This way when we talk about each technique we can point
-to exactly what abstraction it operates in.
-
-Why is softmax / exponential kernel special?
-Maximum entropy distributions, exponential family.
-\href{https://www.lix.polytechnique.fr/~nielsen/CIG-slides.pdf}{Slides on information projections}
-Power series representation
-
-Does this apply to other kernels? Is exp special? Just has to be positive.
-Examine range of kernel?
+We propose to take a different strategy, where we directly learn a feature map
+while disregarding the explicit functional form of the kernel.
 
 \section{Kernel Approximations}
+Move to appendix
+
 Taylor approximation, generating functions
 
 limitations?
