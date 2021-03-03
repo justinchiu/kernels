@@ -130,8 +130,8 @@ and a distinguished start state $z_0 = S$.
 %and emission matrix $O_{z_tx_t} = p(x_t \mid z_t)$.
 
 Training an HMM requires marginalizing over the unobserved
-$z = (z_1,\ldots,z_T)$ in order to obtain the evidence $p(x) = \sum_z p(x,z)$,
-accomplished via the forward algorithm.
+$z = (z_1,\ldots,z_T)$ in order to obtain the evidence, $p(x) = \sum_z p(x,z)$,
+via the forward algorithm.
 The forward algorithm can be written as a sequence of matrix-vector multiplications:
 Let the transition operators $\Lambda_t\in\R^{|\mcZ|\times|\mcZ|}$ for $t\in[2,\ldots,T]$, 
 with entries $$[\Lambda_t]_{z_t,z_{t-1}} = p(x_t\mid z_t)p(z_t\mid z_{t-1}),$$
@@ -202,8 +202,8 @@ In particular, the existence of a feature map $\phi:\R^d\to\mathbb{F}$,
 which maps from the input space $\R^d$ to the feature space $\mathbb{F}$,
 allows us to write generalized softmax in matrix form:
 $$p(x \mid z) \propto [\phi(U)\phi(V)^\top]_{zx},$$
-where $\phi(U) = [\phi(\bu_1), \phi(\bu_2), \ldots,] \in\R^{|\mcZ|\times \dim(\mathbb{F})}$
-and $\phi(V) = [\phi(\bv_1), \phi(\bv_2), \ldots]\in\R^{|\mcX|\times \dim(\mathbb{F})}$.
+where $\phi(U) = [\phi(\bu_1)^\top, \phi(\bu_2)^\top, \ldots,] \in\R^{|\mcZ|\times \dim(\mathbb{F})}$
+and $\phi(V) = [\phi(\bv_1)^\top, \phi(\bv_2)^\top, \ldots]\in\R^{|\mcX|\times \dim(\mathbb{F})}$.
 We will rely on the dimension of the feature space $\dim(\mathbb{F}) < \min(|\mcZ|,|\mcX|)$
 in order to speed up and reduce the space complexity of computing conditional expectations.
 
@@ -211,11 +211,24 @@ Many probabilistic queries can be written as conditional expectations.
 In particular, we can write marginalization in an HMM as a conditional expectation:
 $$p(x) = \sum_z p(x,z) = \sum_z p(z)p(x \mid z) = \Es{z}{p(x \mid z)}.$$
 Decomposing the expectation over time and examining a single timestep, we have
-$$p(x_t \mid \bx_{<t}) = \sum_{z_t} p(x_t \mid z_t)p(z_t \mid x_{<t})
-= \Es{z_t\mid x_{<t}}{p(x_t \mid z_t)}.$$
+$$p(x_t \mid x_{<t})
+= \sum_{z_t}p(x_t\mid z_t)p(z_t \mid x_{<t}).
+$$
+The second term, $p(z_t \mid x_{<t})$,
+can be further decomposed using the generative process of the HMM to
+$$
+ p(z_t \mid x_{<t}) = \sum_{z_{t-1}}p(z_t \mid z_{t-1})p(z_{t-1} \mid x_{<t}),
+$$
+altogether yielding the equation
+$$
+p(x_t \mid x_{<t})
+= \sum_{z_t} p(x_t \mid z_t)\sum_{z_{t-1}}p(z_t \mid z_{t-1})p(z_{t-1} \mid x_{<t})
+= \Es{z_{t-1},z_t\mid z_{t-1}}{p(x_t \mid z_t)}p(z_{t-1}\mid x_{<t}).
+$$
 We can use the matrix form of generalized softmax to speed up this computation.
-Let $[F]_{z_t} = p(x_t\mid z_t)$ in
-$$\Es{z_t \mid x_{<t}}{p(x_t \mid z_t)} = D\phi(U)\phi(V)^\top F$$
+Let $[\mathbf{f}_t]_{z_t} = p(x_t\mid z_t), [\bm\alpha_t]_{z_{t-1}} = p(z_{t-1}\mid x_{<t})$ in
+$$\Es{z_t\mid x_{<t}}{p(x_t\mid z_t)}=(\bm\alpha_t\circ \mathbf{d})^\top\phi(U)\phi(V)^\top\mathbf{f}_t,$$
+where $\mathbf{d} = \frac{1}{\phi(U)\sum_z\phi(\bv_z)}\in\R^{|\mcZ|}$.
 
 Unfortunately, in the case of the exponential kernel, the feature space $\mathbb{F}_{\exp}$
 has infinite dimension.
