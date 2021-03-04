@@ -280,7 +280,7 @@ This was done by first defining the transition operator,
 $\Lambda_t$ as in Equations~\ref{eqn:trans} and \ref{eqn:start}.
 We can perform a similar procedure with the transition distribution using generalized softmax.
 With a generalized softmax parameterization of the transition distribution
-and a feature space $mathbb{F}_\phi$ with feature map $\phi$ and finite dimension $\dim(\mathbb{F})$,
+and a feature space $\mathbb{F}_\phi$ with feature map $\phi$ and finite dimension $\dim(\mathbb{F})$,
 we have the transition operators for all $t \in [2, \ldots, T]$,
 \begin{equation}
 \label{eqn:genlambda}
@@ -312,6 +312,14 @@ time, rather than $O(|\mcZ|^2)$,
 with the overall complexity of inference now linear in the number of states,
 $O(T|\mcZ|\dim(\mathbb{F}))$,
 with generalized softmax.
+
+We parameterize the feature map $\phi(\bu) = W_\phi\bu$,
+with a linear projection $W_\phi\in\R^{\dim(\mathbb{F})\times d}$,
+and train all parameters,
+including $W_\phi$ and the parameters of the transition and emission distributions,\footnote{
+We give the full parameterization of all distributions in the appendix.
+}
+by optimizing the evidence with gradient ascent.
 
 \subsection{Connection to Kernel Mean Embeddings and Kernel Belief Propagation}
 (Not done yet, tbd)
