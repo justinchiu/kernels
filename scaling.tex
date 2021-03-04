@@ -36,7 +36,7 @@ We hypothesize that classical methods are not as performant because they have
 neither been scaled to similar sizes as their modern neural counterparts nor taken advantage of 
 modern parallel hardware.
 A significant barrier to scaling in classical methods is inference,
-which typically scales at best polynomially in the size of the model.
+which typically scales superlinearly in the size of the model.
 In order to make probabilistic models performant while maintaining interpretability,
 we present techniques for circumventing the heavy computational costs of inference.
 We first focus on scaling one of the simplest models, hidden Markov models,
@@ -75,8 +75,8 @@ actually capturing.
 %in syntax-inspired neural language models \citep{du2020exploiting}
 %(this is my own take on that paper,
 %need to find a better citation). 
-This is an issue if the goal is to learn from models in order to answer
-scientific questions.
+%This is an issue if the goal is to learn from models in order to answer
+%scientific questions.
 
 In this work, we investigate scaling probabilistic graphical models
 which explicitly reason about latent variables.
@@ -89,10 +89,14 @@ Despite the simplicity of HMMs,
 they are still computationally expensive to scale
 due to the cost of inference.
 
-In order to scale HMMs, we propose a series of choices in parameterization
-that result in computational speedups for inference in HMMs:
-sparse emission constraint, state dropout, and an efficient kernel-based softmax.
-Before diving into these techniques, we first review HMMs.
+%In order to scale HMMs, we propose a series of choices in parameterization
+%that result in computational speedups for inference in HMMs:
+%sparse emission constraint, state dropout, and an efficient kernel-based generalized softmax.
+%Before diving into these techniques, we first review HMMs.
+
+In order to scale HMMs, we utilize a kernel-based generalized softmax that greatly
+reduces the complexity of inference.
+Before diving into the generalized softmax, we first review HMMs.
 
 \section{Hidden Markov Models for Language Modeling}
 Hidden Markov models (HMMs) have a rich history in natural language processing.
@@ -107,14 +111,14 @@ where the goal is to model the tokens in a sentence $x = (x_1,\ldots,x_T)$.
 
 HMMs are one of the simplest latent variable models for language modeling
 with a per-token latent variable.
-The simplicity is a result of the very strong conditional independence assumption:
-Every timestep has a single discrete state latent variable for representing context,
-and HMMs emit each token given only the corresponding latent state.
+The simplicity is a result of the strong conditional independence assumptions:
+Every timestep has a single discrete state variable used to represent context,
+which is then the only information used to emit a token.
 Additionally, the next state is a function of only the previous state.
 These independence assumptions result in a bottleneck where all information
-must flow through the single state variable,
-causing performance to be limited by the number of states
-while also giving the model interpretability by limiting dependencies.
+must flow through the single state variable at each timestep,
+causing performance to be limited by the number of states.
+Limiting dependencies in this way also gives the model interpretability.
 
 Formally, HMMs have the following generative process:
 for each $t \in [T]$ timestep, first choose a latent state $z_t \in \mcZ$,
@@ -122,28 +126,33 @@ where $|\mcZ|$ is the number of latent states,
 then choose a token to emit $x_t \in \mcX$.
 This defines the joint distribution:
 \begin{equation}
+\label{eqn:joint}
 p(x,z) = \prod_t p(x_t\mid z_t) p(z_t \mid z_{t-1}),
 \end{equation}
 with transitions $p(z_t \mid z_{t-1})$, emissions $p(x_t \mid z_t)$,
+%with transitions $[A]_{z_{t-1},z_t} = p(z_t \mid z_{t-1})$,
+%emissions $[O]_{z_t,x_t} = p(x_t \mid z_t)$,
 and a distinguished start state $z_0 = S$.
-%where we have the transition matrix $A_{z_{t-1}z_t} = p(z_t \mid z_{t-1})$
-%and emission matrix $O_{z_tx_t} = p(x_t \mid z_t)$.
 
 Training an HMM requires marginalizing over the unobserved
 $z = (z_1,\ldots,z_T)$ in order to obtain the evidence, $p(x) = \sum_z p(x,z)$,
 via the forward algorithm.
 The forward algorithm can be written as a sequence of matrix-vector multiplications:
 Let the transition operators $\Lambda_t\in\R^{|\mcZ|\times|\mcZ|}$ for $t\in[2,\ldots,T]$, 
-with entries $$[\Lambda_t]_{z_t,z_{t-1}} = p(x_t\mid z_t)p(z_t\mid z_{t-1}),$$
-with the first operator given by
-$$[\Lambda_1]_{z_1,z_0} = \begin{cases}
-p(x_1 \mid z_1) p(z_1 \mid z_0=S) & z_0 = S\\
-0 & \textrm{otherwise}.
-\end{cases}
-$$
+with entries
+\begin{equation}
+\label{eqn:trans}
+[\Lambda_t]_{z_{t-1},z_{t}} = p(x_t\mid z_t)p(z_t\mid z_{t-1}),
+\end{equation}
+with the start vector, $\pi\in\R^{|\mcZ|}$, given by
+\begin{equation}
+\label{eqn:start}
+[\pi]_{z_1} = p(x_1 \mid z_1) p(z_1 \mid z_0=S).
+\end{equation}
 The evidence is then given by
 \begin{equation}
-p(x) = \mathbf{1}^\top\Lambda_1\Lambda_2\cdots\Lambda_T\mathbf{1},
+\label{eqn:evidence}
+p(x) = \bm\pi^\top\Lambda_2\cdots\Lambda_T\mathbf{1},
 \end{equation}
 where $\mathbf{1}\in\R^{|\mcZ|\times1}$ is the column vector of all ones.
 
@@ -171,47 +180,133 @@ efficient computation of conditional expectations with generalized softmax.
 Softmax is commonly used to parameterize conditional distributions in
 neural nets, and has origins in smooth
 approximations of argmax as well as the conditional max entropy problem \citep{}.
-In a conditional distribution $p(x \mid z)$, the softmax parameterization is as follows: 
-$$p(x \mid z) = \frac{\exp(\bu_z^\top \bv_x)}{\sum_{x'} \exp(\bu_z^\top \bv_{x'})},$$
-with $\bu_z,\bv_x\in\R^d$ vector-space embeddings of values of $x,z$.\footnote{
-Softmax may also have a temperature parameter that rescales 
+Focusing on the transition distribution $p(z_t \mid z_{t-1})$,
+the softmax parameterization is as follows: 
+\begin{equation*}
+p(z_t \mid z_{t-1}) = \frac{\exp(\bu_{z_t-1}^\top \bv_{z_{t-1}})}
+{\sum_{z'} \exp(\bu_{z_{t-1}}^\top \bv_{z'})},
+\end{equation*}
+with $\bu_{z_{t-1}},\bv_{z_t}\in\R^d$ vector-space embeddings of values of
+$z_{t-1},z_{t}$.\footnote{
+Softmax also has a temperature parameter that rescales 
 the dot product, which we omit.
 }
-The numerator, $\exp(\bu_z^\top \bv_x)$, is the exponential kernel \citep{rawat2019sampledsoftmax}.
-Although the parameterization of softmax relies on the exponential kernel,
-we can generalize softmax to arbitrary nonnegative kernels $K: \R^d\times\R^d\to\R_+$.
-Replacing the exponential kernel in softmax with the nonnegative kernel $K$
-gives us generalized softmax,\footnote{
+The numerator, $\exp(\bu_{z_{t-1}}^\top \bv_{z_t})$,
+is the exponential kernel \citep{rawat2019sampledsoftmax}.
+
+Although the parameterization of softmax is specific to the exponential kernel,
+softmax can be generalized with arbitrary nonnegative kernels $K: \R^d\times\R^d\to\R_+$.
+Replacing the exponential kernel with the nonnegative kernel $K$ yields 
+generalized softmax,
+\begin{equation}
+\label{eqn:gensoftmax}
+p(z_t \mid z_{t-1}) = \frac{K(\bu_{z_{t-1}}, \bv_{z_t})}{\sum_{z'} K(\bu_{z_{t-1}}, \bv_{z'})},
+\end{equation}
+where we again have embeddings $\bu_{z_{t-1}},\bv_{z_t}\in\R^d$.\footnote{
 The term generalized softmax is inspired by generalized linear models,
 which generalized linear models to non-gaussian errors with a link function,
 similar to the use of kernels in generalized softmax.
 }
-$$p(x \mid z) = \frac{K(\bu_z, \bv_x)}{\sum_{x'} K(\bu_z, \bv_{x'})},$$
-where we again have embeddings $\bu_z,\bv_x\in\R^d$.
 
 Kernels have a long history in machine learning,
 where they are used to extend linear classification models to nonlinear feature spaces,
 such as in support vector machines or regression.
 In those settings, kernels are intuitively used to measure the similarity between two data points,
-relying on the existence of a feature mapping in an associated reproducing kernel Hilbert space 
-for kernel functions with the finitely positive semi-definite property \citep{}.\todo{
-Can expand on this or remove.}
-In our generalized softmax setting, kernels instead parameterize conditional distributions by
+hinging on a connection to an inner product in a reproducing kernel Hilbert space.
+%relying on the existence of a feature mapping in an associated reproducing kernel Hilbert space 
+%for kernel functions with the finitely positive semi-definite property \citep{}.\todo{
+%Can expand on this or remove.}
+In the generalized softmax setting, kernels instead parameterize conditional distributions by
 measuring the propensity of one random variable taking a particular value given
 the value of another random variable.
-However, the connection to feature maps in reproducing kernel Hilbert spaces 
+However, the connection to inner products in reproducing kernel Hilbert spaces 
 is still useful.
-In particular, the existence of a feature map $\phi:\R^d\to\mathbb{F}$,
-which maps from the input space $\R^d$ to the feature space $\mathbb{F}$,
-allows us to write generalized softmax in matrix form:
-$$p(x \mid z) \propto [\phi(U)\phi(V)^\top]_{zx},$$
-where $\phi(U) = [\phi(\bu_1)^\top, \phi(\bu_2)^\top, \ldots,] \in\R^{|\mcZ|\times \dim(\mathbb{F})}$
-and $\phi(V) = [\phi(\bv_1)^\top, \phi(\bv_2)^\top, \ldots]\in\R^{|\mcX|\times \dim(\mathbb{F})}$.
-We will rely on the dimension of the feature space $\dim(\mathbb{F}) < \min(|\mcZ|,|\mcX|)$
-in order to speed up and reduce the space complexity of computing conditional expectations.
+In particular, the connection guarantees the existence of a feature map $\phi:\R^d\to\mathbb{F}$,
+a map from the input space $\R^d$ to the feature space $\mathbb{F}$,
+which allows us to write generalized softmax in matrix form:
+$$p(z_t \mid z_{t-1}) = [D\phi(U)\phi(V)^\top]_{z_{t-1},z_t},$$
+where we have the stacked embeddings $\phi(U),\phi(V)$ and the normalizing constants $D$,
+\begin{align*}
+\phi(U) &= [\phi(\bu_1)^\top, \phi(\bu_2)^\top, \ldots] \in\R^{|\mcZ|\times \dim(\mathbb{F})},\\
+\phi(V) &= [\phi(\bv_1)^\top, \phi(\bv_2)^\top, \ldots]\in\R^{|\mcZ|\times \dim(\mathbb{F})},\\
+D &= \textrm{diag}([\phi(\bu_1)^\top \sum_z\phi(\bv_z), \phi(\bu_2)^\top \sum_z\phi(\bv_z),\ldots]).
+\end{align*}
+We will rely on the dimension of the feature space being small 
+relative to the number of states, $\dim(\mathbb{F}) < |\mcZ|$,
+in order to improve the time and space complexity of inference.
 
 \section{Inference with Generalized Softmax}
+Unfortunately, in the case of softmax, which relies on the exponential kernel,
+the feature space $\mathbb{F}_{\exp}$ has infinite dimension.
+This can be seen from the Taylor expansion:
+$$
+\exp(\bu^\top \bv)
+= \sum_{n=0}^\infty \frac{(\bu^\top \bv)^n}{n!}
+= \sum_{n=0}^\infty \frac{(\sum_{i=1}^d[\bu]_i[\bv]_i)^n}{n!}
+= \sum_{n=0}^\infty \frac{\sum_{\mathbf{j} \in [d]^n}
+    (\prod_{i=1}^n [\bu]_{[\mathbf{j}]_i})
+    (\prod_{i=1}^n [\bv]_{[\mathbf{j}]_i})}{n!},
+$$
+where we have expanded the terms of the numerator by summing over all subsets
+$\mathbf{j}$ of size $n$ elements of $[d]$, including repeats and different
+orderings.
+This yields a feature map of 
+$$[\phi(\bu)]_{n,\mathbf{j}} = \frac{\prod_{i=1}^n [\bu]_{[\mathbf{j}]_i}}{\sqrt{n!}}$$
+for all $n\in\N$.\footnote{
+While this is one possible feature map, there may exist
+multiple valid feature maps.
+}
+We can therefore express the exponential kernel as an inner product of
+infinite dimensional vectors \citep{cotter2011gausskernel},
+$$\exp(\bu^\top\bv) 
+= \sum_{n=0}^\infty\sum_{\mathbf{j}\in[d]^n}[\phi(\bu)]_{n,\mathbf{j}}[\phi(\bv)]_{n,\mathbf{j}}
+= \langle \phi(\bu), \phi(\bv) \rangle,
+$$
+where the dimension of the feature space $\dim(\mathbb{F}_{\exp}) = \dim(\phi(\bu)) = \infty$.
+Since the infinite dimensional feature space of the exponential kernel is larger than
+the finite $|\mcZ|$, recent work has instead turned to approximations of the exponential kernel
+based on random Fourier features
+\citep{rawat2019sampledsoftmax,choromanski2020performer,peng2021rfa}.
+These approaches use a finite-dimensional unbiased estimator of the exponential kernel.
+
+We propose to take a different strategy, where we directly learn a feature map
+for the generalized softmax while disregarding the explicit functional form of the kernel.
+This allows us to use the matrix representation of generalized softmax to 
+efficiently perform inference.
+
+Previously, Equation~\ref{eqn:evidence} shows how to compute the evidence,
+$p(x)$, with a series of matrix-vector products.
+This was done by first defining the transition operator,
+$\Lambda_t$ as in Equations~\ref{eqn:trans} and \ref{eqn:start}.
+We can perform a similar procedure with the transition distribution using generalized softmax.
+With a generalized softmax parameterization of the transition distribution
+and a feature space $mathbb{F}_\phi$ with feature map $\phi$ and finite dimension $\dim(\mathbb{F})$,
+we have the transition operator,
+\begin{equation}
+\label{eqn:genlambda}
+\Lambda_t =
+\underbrace{\textrm{diag}(\mathbf{o}_t) \phi(U)}_{L_t}\underbrace{{\phi(V)}^\top}_{R_t},
+\end{equation}
+where $\mathbf{o}_t = [
+    p(x_t \mid z_t=1)\phi(\bu_1)^\top \sum_z\phi(\bv_z),
+    p(x_t \mid z_t=2)\phi(\bu_2)^\top \sum_z\phi(\bv_z),
+    \ldots
+]\in\R^{|\mcZ|}$, the emission probability and normalizing constant for each state.
+The evidence can the be computed using $L_t\in\R^{|\mcZ|\times\dim{\mathbb{F}}}$ and $R_t\in\R^{\dim(\mathbb{F})\times|\mcZ|}$:
+\begin{equation}
+\label{eqn:genevidence}
+p(x)
+= \bm\pi\Lambda_2\cdots\Lambda_T\mathbf{1}
+= \bm\pi(L_2R_2)\cdots (L_TR_T)\mathbf{1}
+= \bm\pi L_2R_2\cdots L_TR_T\mathbf{1},
+\end{equation}
+where we have substituted Equation~\ref{eqn:genlambda} into the computation of the evidence
+and applied the associative property of matrix multiplication.
+When performed from left to right, the matrix vector products now take $O(|\mcZ|\dim(\mathbb{F}))$
+time, rather than $O(|\mcZ|^2)$.
+
 \subsection{Connection to Kernel Mean Embeddings and Kernel Belief Propagation}
+(Not done yet, tbd)
 Many probabilistic queries can be written as conditional expectations.
 In particular, we can write marginalization in an HMM as a conditional expectation:
 $$p(x) = \sum_z p(x,z) = \sum_z p(z)p(x \mid z) = \Es{z}{p(x \mid z)}.$$
@@ -235,38 +330,6 @@ Let $[\mathbf{f}_t]_{z_t} = p(x_t\mid z_t), [\bm\alpha_t]_{z_{t-1}} = p(z_{t-1}\
 $$\Es{z_t\mid x_{<t}}{p(x_t\mid z_t)}=(\bm\alpha_t\circ \mathbf{d})^\top\phi(U)\phi(V)^\top\mathbf{f}_t,$$
 where $\mathbf{d} = \frac{1}{\phi(U)\sum_z\phi(\bv_z)}\in\R^{|\mcZ|}$.
 
-Unfortunately, in the case of the exponential kernel, the feature space $\mathbb{F}_{\exp}$
-has infinite dimension.
-This can be seen from the Taylor expansion:
-\begin{align*}
-\exp(\bu^\top \bv)
-&= \sum_{n=0}^\infty \frac{(\bu^\top \bv)^n}{n!}\\
-&= \sum_{n=0}^\infty \frac{(\sum_{i=1}^du_iv_i)^n}{n!}\\
-&= \sum_{n=0}^\infty \frac{\sum_{\mathbf{j} \in [d]^n}(\prod_{i=1}^n u_{j_i})(\prod_{i=1}^n v_{j_i})}{n!},
-\end{align*}
-where we have expanded the terms of the numerator by summing over all different orderings
-$\mathbf{j}$ of subsets of size $n$.
-This yields a feature map of 
-$$[\phi(\bu)]_{n,\mathbf{j}} = \frac{\prod_{i=1}^n u_{j_i}}{\sqrt{n!}}$$
-for all $n\in\N$.\footnote{
-Note that while this is one possible feature map, there may exist
-multiple valid feature maps.
-}
-We can therefore express the exponential kernel as an inner product of
-infinite dimensional vectors \citep{cotter2011gausskernel},
-$$\exp(\bu^\top\bv) 
-= \sum_{n=0}^\infty\sum_{\mathbf{j}\in[d]^n}[\phi(\bu)]_{n,\mathbf{j}}[\phi(\bv)]_{n,\mathbf{j}}
-= \langle \phi(\bu), \phi(\bv) \rangle,
-$$
-where the dimension of the feature space $\dim(\mathbb{F}_{\exp}) = \dim(\phi(\bu)) = \infty$.
-Since the infinite dimensional feature space of the exponential kernel is clearly larger than
-$\min(|\mcZ|,|\mcX|)$, recent work has instead turned to approximations of the exponential kernel
-based on random Fourier features
-\citep{rawat2019sampledsoftmax,choromanski2020performer,peng2021rfa}.
-These approaches use a finite-dimensional unbiased estimator of the exponential kernel.
-
-We propose to take a different strategy, where we directly learn a feature map
-while disregarding the explicit functional form of the kernel.
 
 \section{Kernel Approximations}
 Move to appendix
