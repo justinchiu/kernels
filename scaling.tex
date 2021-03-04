@@ -281,7 +281,7 @@ $\Lambda_t$ as in Equations~\ref{eqn:trans} and \ref{eqn:start}.
 We can perform a similar procedure with the transition distribution using generalized softmax.
 With a generalized softmax parameterization of the transition distribution
 and a feature space $mathbb{F}_\phi$ with feature map $\phi$ and finite dimension $\dim(\mathbb{F})$,
-we have the transition operator,
+we have the transition operators for all $t \in [2, \ldots, T]$,
 \begin{equation}
 \label{eqn:genlambda}
 \Lambda_t =
@@ -292,7 +292,10 @@ where $\mathbf{o}_t = [
     p(x_t \mid z_t=2)\phi(\bu_2)^\top \sum_z\phi(\bv_z),
     \ldots
 ]\in\R^{|\mcZ|}$, the emission probability and normalizing constant for each state.
-The evidence can the be computed using $L_t\in\R^{|\mcZ|\times\dim{\mathbb{F}}}$ and $R_t\in\R^{\dim(\mathbb{F})\times|\mcZ|}$:
+We can interpret $L_t\in\R^{|\mcZ|\times\dim{\mathbb{F}}}$ as a 
+projection into feature space, and $R_t\in\R^{\dim(\mathbb{F})\times|\mcZ|}$
+as a projection back into state space.
+The evidence can then be computed using $L_t$ and $R_t$ as follows:
 \begin{equation}
 \label{eqn:genevidence}
 p(x)
@@ -303,7 +306,10 @@ p(x)
 where we have substituted Equation~\ref{eqn:genlambda} into the computation of the evidence
 and applied the associative property of matrix multiplication.
 When performed from left to right, the matrix vector products now take $O(|\mcZ|\dim(\mathbb{F}))$
-time, rather than $O(|\mcZ|^2)$.
+time, rather than $O(|\mcZ|^2)$,
+with the overall complexity of inference now linear in the number of states,
+$O(T|\mcZ|\dim(\mathbb{F}))$,
+with generalized softmax.
 
 \subsection{Connection to Kernel Mean Embeddings and Kernel Belief Propagation}
 (Not done yet, tbd)
