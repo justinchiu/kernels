@@ -313,7 +313,7 @@ with the overall complexity of inference now linear in the number of states,
 $O(T|\mcZ|\dim(\mathbb{F}))$,
 with generalized softmax.
 
-We parameterize the feature map $\phi(\bu) = W_\phi\bu$,
+We parameterize the feature map $\phi(\bu) = \exp(W_\phi\bu - \frac{\|\bu\|_2^2}{2})$,
 with a linear projection $W_\phi\in\R^{\dim(\mathbb{F})\times d}$,
 and train all parameters,
 including $W_\phi$ and the parameters of the transition and emission distributions,\footnote{
