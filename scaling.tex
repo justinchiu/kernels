@@ -135,16 +135,16 @@ Training an HMM requires marginalizing over the unobserved
 sequence $z = (z_1,\ldots,z_T)$ in order to obtain the evidence, $p(x) = \sum_z p(x,z)$,
 via the forward algorithm.
 The forward algorithm can be written as a sequence of matrix-vector multiplications:
-Let the transition operators $\Lambda_t\in\R^{|\mcZ|\times|\mcZ|}$ for $t\in[2,\ldots,T]$, 
-with entries
-\begin{equation}
-\label{eqn:trans}
-[\Lambda_t]_{z_{t-1},z_{t}} = p(x_t\mid z_t)p(z_t\mid z_{t-1}),
-\end{equation}
-and the start vector, $\bm\pi\in\R^{|\mcZ|}$, given by
+Let the start vector, $\bm\pi\in\R^{|\mcZ|}$, have entries
 \begin{equation}
 \label{eqn:start}
-[\bm\pi]_{z_1} = p(x_1 \mid z_1) p(z_1 \mid z_0=S).
+[\bm\pi]_{z_1} = p(x_1 \mid z_1) p(z_1 \mid z_0=S),
+\end{equation}
+and the subsequent transition operators, $\Lambda_t\in\R^{|\mcZ|\times|\mcZ|}$ for $t\in[2,\ldots,T]$, 
+have entries
+\begin{equation}
+\label{eqn:trans}
+[\Lambda_t]_{z_{t-1},z_{t}} = p(x_t\mid z_t)p(z_t\mid z_{t-1}).
 \end{equation}
 The evidence is then given by
 \begin{equation}
