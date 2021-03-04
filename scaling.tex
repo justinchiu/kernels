@@ -32,7 +32,7 @@ Modern methods for language models based purely on neural networks are
 opaque and difficult to analyze,
 while alternative methods based on probabilistic graphical models
 are interpretable but not performant.
-We hypothesize that classical methods are not as performant because they have
+We hypothesize that probabilistic methods are not as performant neural methods because they have
 neither been scaled to similar sizes as their modern neural counterparts nor taken advantage of 
 modern parallel hardware.
 A significant barrier to scaling in classical methods is inference,
@@ -48,7 +48,7 @@ probabilistic context-free grammars.
 Neural network-based generative models have led to progress in
 difficult tasks such as language modeling and machine translation.
 However, this progress comes at the cost of interpretability.
-Neural networks are flexible function approximations,
+Neural networks are flexible function approximators,
 but that flexibility results in opaque models that are difficult to analyze.
 As opposed to post-hoc analysis of models \citep{tenney2019probing},
 we instead propose to explore
@@ -57,7 +57,7 @@ In particular, we focus on probabilistic graphical models,
 which allow for the execution of arbitrary probabilistic queries.
 These queries include
 the ability to calculate conditional and marginal probabilities given evidence.
-This interpretability comes at a cost.
+This interpretability comes at a cost:
 Performing these queries via inference is expensive in both time and space.
 The computational complexity of inference is a major impediment to scaling
 graphical models to large sizes, which we hypothesize prevents them from
@@ -82,21 +82,18 @@ In this work, we investigate scaling probabilistic graphical models
 which explicitly reason about latent variables.
 We focus on the one of the simplest latent variable models,
 the hidden Markov model (HMM).
-HMMs posit a simple generative process, that first generates a sequence of
-latent states then the emissions.
-Additionally, HMMs make very strong conditional independence assumptions.
 Despite the simplicity of HMMs,
 they are still computationally expensive to scale
 due to the cost of inference.
+In order to scale HMMs, we utilize a kernel-based generalized softmax that greatly
+reduces the complexity of inference.
+Before diving into the generalized softmax, we first review HMMs.
 
 %In order to scale HMMs, we propose a series of choices in parameterization
 %that result in computational speedups for inference in HMMs:
 %sparse emission constraint, state dropout, and an efficient kernel-based generalized softmax.
 %Before diving into these techniques, we first review HMMs.
 
-In order to scale HMMs, we utilize a kernel-based generalized softmax that greatly
-reduces the complexity of inference.
-Before diving into the generalized softmax, we first review HMMs.
 
 \section{Hidden Markov Models for Language Modeling}
 Hidden Markov models (HMMs) have a rich history in natural language processing.
@@ -107,7 +104,7 @@ and word alignment in machine translation \citep{vogel1996hmm}.
 They have also been used as components in neural models,
 such as in attention \citep{shankar2018posterior}.
 We focus on applying HMMs to the task of language modeling,
-where the goal is to model the tokens in a sentence $x = (x_1,\ldots,x_T)$.
+where the goal is to model the sequence of tokens in a sentence $x = (x_1,\ldots,x_T)$.
 
 HMMs are one of the simplest latent variable models for language modeling
 with a per-token latent variable.
@@ -135,7 +132,7 @@ with transitions $p(z_t \mid z_{t-1})$, emissions $p(x_t \mid z_t)$,
 and a distinguished start state $z_0 = S$.
 
 Training an HMM requires marginalizing over the unobserved
-$z = (z_1,\ldots,z_T)$ in order to obtain the evidence, $p(x) = \sum_z p(x,z)$,
+sequence $z = (z_1,\ldots,z_T)$ in order to obtain the evidence, $p(x) = \sum_z p(x,z)$,
 via the forward algorithm.
 The forward algorithm can be written as a sequence of matrix-vector multiplications:
 Let the transition operators $\Lambda_t\in\R^{|\mcZ|\times|\mcZ|}$ for $t\in[2,\ldots,T]$, 
@@ -144,10 +141,10 @@ with entries
 \label{eqn:trans}
 [\Lambda_t]_{z_{t-1},z_{t}} = p(x_t\mid z_t)p(z_t\mid z_{t-1}),
 \end{equation}
-with the start vector, $\pi\in\R^{|\mcZ|}$, given by
+and the start vector, $\bm\pi\in\R^{|\mcZ|}$, given by
 \begin{equation}
 \label{eqn:start}
-[\pi]_{z_1} = p(x_1 \mid z_1) p(z_1 \mid z_0=S).
+[\bm\pi]_{z_1} = p(x_1 \mid z_1) p(z_1 \mid z_0=S).
 \end{equation}
 The evidence is then given by
 \begin{equation}
@@ -159,7 +156,6 @@ where $\mathbf{1}\in\R^{|\mcZ|\times1}$ is the column vector of all ones.
 On a serial machine, the cost of computing each matrix-vector product in
 the above equation takes time $O(|\mcZ|^2)$, resulting in a total
 running time of $O(T|\mcZ|^2)$ for the forward algorithm.
-\todo{gradient computation requires $O(T|\mcZ|^2)$ space}
 The quadratic dependence on the number of states precludes
 scaling to extremely large state spaces.
 
@@ -167,15 +163,15 @@ In the following sections we will introduce techniques that
 aim to reduce the dependence of the time and space complexity
 of inference on the size of the state space.
 
-\section{Generalized Softmax}
+\section{Generalized Softmax with Kernels}
 Parameterization of the probability distributions in a model affects both
 computational performance as well as generalization.
 Recent work on efficient attention in neural models shows that careful choice of parameterization
 of the softmax kernel, the main component of attention,
 results in large computational gains at little cost in accuracy
 \citep{choromanski2020performer,peng2021rfa}.
-In this section we will cover generalized softmax with kernels and the
-efficient computation of conditional expectations with generalized softmax.
+In this section we will cover generalized softmax with kernels and 
+its use in efficient inference.
 
 Softmax is commonly used to parameterize conditional distributions in
 neural nets, and has origins in smooth
@@ -224,12 +220,16 @@ is still useful.
 In particular, the connection guarantees the existence of a feature map $\phi:\R^d\to\mathbb{F}$,
 a map from the input space $\R^d$ to the feature space $\mathbb{F}$,
 which allows us to write generalized softmax in matrix form:
-$$p(z_t \mid z_{t-1}) = [D\phi(U)\phi(V)^\top]_{z_{t-1},z_t},$$
-where we have the stacked embeddings $\phi(U),\phi(V)$ and the normalizing constants $D$,
+\begin{equation}
+\label{eqn:gentrans}
+p(z_t \mid z_{t-1}) = [\textrm{diag}(\mathbf{d})\phi(U)\phi(V)^\top]_{z_{t-1},z_t},
+\end{equation}
+where we have the stacked embeddings $\phi(U),\phi(V)\in\R^{|\mcZ|\times\dim(\mathbb{F})}$
+and the normalizing constants $\mathbf{d}\in\R^{|\mcZ|}$,
 \begin{align*}
 \phi(U) &= [\phi(\bu_1)^\top, \phi(\bu_2)^\top, \ldots] \in\R^{|\mcZ|\times \dim(\mathbb{F})},\\
 \phi(V) &= [\phi(\bv_1)^\top, \phi(\bv_2)^\top, \ldots]\in\R^{|\mcZ|\times \dim(\mathbb{F})},\\
-D &= \textrm{diag}([\phi(\bu_1)^\top \sum_z\phi(\bv_z), \phi(\bu_2)^\top \sum_z\phi(\bv_z),\ldots]).
+[\mathbf{d}]_{z_{t-1}} &= \phi(\bu_{z_{t-1}})^\top \sum_z\phi(\bv_z).
 \end{align*}
 We will rely on the dimension of the feature space being small 
 relative to the number of states, $\dim(\mathbb{F}) < |\mcZ|$,
@@ -285,13 +285,15 @@ we have the transition operators for all $t \in [2, \ldots, T]$,
 \begin{equation}
 \label{eqn:genlambda}
 \Lambda_t =
-\underbrace{\textrm{diag}(\mathbf{o}_t) \phi(U)}_{L_t}\underbrace{{\phi(V)}^\top}_{R_t},
+\underbrace{\textrm{diag}(\mathbf{d})\phi(U)}_{L_t}\underbrace{{\phi(V)}^\top\textrm{diag}(\mathbf{o}_t)}_{R_t},
 \end{equation}
-where $\mathbf{o}_t = [
-    p(x_t \mid z_t=1)\phi(\bu_1)^\top \sum_z\phi(\bv_z),
-    p(x_t \mid z_t=2)\phi(\bu_2)^\top \sum_z\phi(\bv_z),
-    \ldots
-]\in\R^{|\mcZ|}$, the emission probability and normalizing constant for each state.
+where the entries of $\mathbf{o}_t\in\R^{|\mcZ|}$
+are given by
+$$
+[\mathbf{o}_t]_{z_t} = p(x_t \mid z_t),
+$$
+the emission probability and $\mathbf{d}\in\R^{|\mcZ|}$ contains the normalizing constant
+for each state.
 We can interpret $L_t\in\R^{|\mcZ|\times\dim{\mathbb{F}}}$ as a 
 projection into feature space, and $R_t\in\R^{\dim(\mathbb{F})\times|\mcZ|}$
 as a projection back into state space.
