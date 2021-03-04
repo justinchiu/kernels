@@ -229,7 +229,7 @@ and the normalizing constants $\mathbf{d}\in\R^{|\mcZ|}$,
 \begin{align*}
 \phi(U) &= [\phi(\bu_1)^\top, \phi(\bu_2)^\top, \ldots] \in\R^{|\mcZ|\times \dim(\mathbb{F})},\\
 \phi(V) &= [\phi(\bv_1)^\top, \phi(\bv_2)^\top, \ldots]\in\R^{|\mcZ|\times \dim(\mathbb{F})},\\
-[\mathbf{d}]_{z_{t-1}} &= \phi(\bu_{z_{t-1}})^\top \sum_z\phi(\bv_z).
+[\mathbf{d}]_{z_{t-1}} &= \frac{1}{\phi(\bu_{z_{t-1}})^\top \sum_z\phi(\bv_z)}.
 \end{align*}
 We will rely on the dimension of the feature space being small 
 relative to the number of states, $\dim(\mathbb{F}) < |\mcZ|$,
