@@ -32,13 +32,12 @@ Modern methods for language models based purely on neural networks are
 opaque and difficult to analyze,
 while alternative methods based on probabilistic graphical models
 are interpretable but not performant.
-We hypothesize that probabilistic methods are not as performant neural methods because they have
-neither been scaled to similar sizes as their modern neural counterparts nor taken advantage of 
-modern parallel hardware.
-A significant barrier to scaling in probabilistic methods is inference,
-which typically scales superlinearly in the size of the model.
+We hypothesize that probabilistic methods are not as performant as neural methods
+because they have not been scaled to massive sizes.
+A significant barrier to scaling probabilistic methods is inference,
+which typically takes computation superlinear in the size of the model.
 In order to make probabilistic models performant while maintaining interpretability,
-we present techniques for circumventing the heavy computational costs of inference.
+we present techniques for circumventing the heavy computational cost of inference.
 We first focus on scaling one of the simplest models, hidden Markov models,
 then show our techniques generalize to more complex models, such as 
 probabilistic context-free grammars.
@@ -48,11 +47,16 @@ probabilistic context-free grammars.
 Neural network-based generative models have led to progress in
 difficult tasks such as language modeling and machine translation.
 However, this progress comes at the cost of interpretability.
-Neural networks are flexible function approximators,
-but that flexibility results in opaque models that are difficult to analyze.
-As opposed to post-hoc analysis of models \citep{tenney2019probing},
-we instead propose to explore
-the space of models that interpretable from the start.
+While neural networks are flexible function approximators,
+they are also opaque and difficult to analyze.
+This leads to difficulty in both trusting their predictions as well as
+using them to validate scientific hypothesis.
+There are three paths forward towards interpretability:
+The first is post-hoc test-time analysis of models \citep{tenney2019probing},
+the second is training-time augmentations of models \citep{},
+and the third is model-based approaches \citep{}.
+We explore the third path,
+formulating models that interpretable from the start.
 In particular, we focus on probabilistic graphical models,
 which allow for the execution of arbitrary probabilistic queries.
 These queries include
@@ -62,7 +66,7 @@ Performing these queries via inference is expensive in both time and space.
 The computational complexity of inference is a major impediment to scaling
 graphical models to large sizes, which we hypothesize prevents them from
 reaching the performance of neural networks.
-We seek to answer the question of whether we can have graphical models that are both
+We seek to answer the question of whether graphical models can be both
 performant and interpretable.
 
 We use language modeling as a benchmark task, as the complex 
@@ -71,12 +75,6 @@ and sometimes long-range phenomena in natural language provides a good testbed.
 Language model benchmarks are currently dominated by autoregressive neural models,
 which makes it difficult to analyze what properties of language the models are
 actually capturing.
-%For example, it is difficult to analyze the inner representations used
-%in syntax-inspired neural language models \citep{du2020exploiting}
-%(this is my own take on that paper,
-%need to find a better citation). 
-%This is an issue if the goal is to learn from models in order to answer
-%scientific questions.
 
 In this work, we investigate scaling probabilistic graphical models
 which explicitly reason about latent variables.
@@ -116,6 +114,7 @@ These independence assumptions result in a bottleneck where all information
 must flow through the single state variable at each timestep,
 causing performance to be limited by the number of states.
 Limiting dependencies in this way also gives the model interpretability.
+(Expand on what that means)
 
 Formally, HMMs have the following generative process:
 for each $t \in [T]$ timestep, first choose a latent state $z_t \in \mcZ$,
