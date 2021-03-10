@@ -232,7 +232,10 @@ and the normalizing constants $\mathbf{d}\in\R^{|\mcZ|}$,
 \end{align*}
 We will rely on the dimension of the feature space being small 
 relative to the number of states, $\dim(\mathbb{F}) < |\mcZ|$,
-in order to improve the time and space complexity of inference.
+in order to improve the time and space complexity of inference.\footnote{
+Matrix multiplication with a diagonal matrix is equivalent to rescaling rows,
+and is therefore computationally cheap.
+}
 
 \section{Inference with Generalized Softmax}
 Unfortunately, in the case of softmax, which relies on the exponential kernel,
@@ -321,29 +324,38 @@ We give the full parameterization of all distributions in the appendix.
 by optimizing the evidence with gradient ascent.
 
 \subsection{Connection to Kernel Mean Embeddings and Kernel Belief Propagation}
-(Not done yet, tbd)
-Many probabilistic queries can be written as conditional expectations.
-In particular, we can write marginalization in an HMM as a conditional expectation:
-$$p(x) = \sum_z p(x,z) = \sum_z p(z)p(x \mid z) = \Es{z}{p(x \mid z)}.$$
-Decomposing the expectation over time and examining a single timestep, we have
-$$p(x_t \mid x_{<t})
-= \sum_{z_t}p(x_t\mid z_t)p(z_t \mid x_{<t}).
+Kernel belief propagation, as well as the line of research that uses kernel mean embeddings,
+rely on the kernel trick to compute conditional expectations.
+In particular, the system of equations in parallel belief propagation can be
+rewritten so that the messages are conditional expectations.
+
+Similarly, inference in an HMM can also be written with conditional expectations.
+At each timestep, the forward algorithm recursively computes the quantity
+\begin{equation}
+\label{eqn:alpha}
+p(z_t \mid x_{<t})
+= \sum_{z_{t-1}} p(z_t \mid z_{t-1})p(z_{t-1}\mid x_{<t})
+= \Es{z_{t-1}\mid x_{<t}}{p(z_t \mid z_{t-1})}.
+\end{equation}
+Applying the definition of generalized softmax to Equation~\ref{eqn:alpha}
+and rewriting $[\bm\alpha_t]_{z_t} = p(z_t \mid x_{\le t})$
+we have
+\begin{equation}
+\bm\alpha_t = \textrm{diag}(d)\phi(U)\phi(V)^\top\bm\alpha_{t-1},
+\end{equation}
+by Equation~\ref{eqn:gentrans}.
+Identical to the analysis in the previous section, this reduces the computation
+performed at each timestep from $O(|\mcZ|^2)$ to $O(|\mcZ|\dim(\mathbb{F}))$.
+This can then be used in conjunction with $p(x_t \mid z_t)$ to compute
+the quantities
 $$
-The second term, $p(z_t \mid x_{<t})$,
-can be further decomposed using the generative process of the HMM to
+p(x_t \mid x_{<t}) = \sum_{z_t}p(x_t \mid z_t)p(z_t \mid z_{<t}),
+\qquad
+p(z_t \mid x_{\le t}) = \frac{p(x_t, z_t \mid x_{<t})}{p(x_t \mid x_{<t})},
+\qquad
+p(x) = \prod_t p(x_t \mid x_{<t}),
 $$
- p(z_t \mid x_{<t}) = \sum_{z_{t-1}}p(z_t \mid z_{t-1})p(z_{t-1} \mid x_{<t}),
-$$
-altogether yielding the equation
-$$
-p(x_t \mid x_{<t})
-= \sum_{z_t} p(x_t \mid z_t)\sum_{z_{t-1}}p(z_t \mid z_{t-1})p(z_{t-1} \mid x_{<t})
-= \Es{z_{t-1},z_t\mid z_{t-1}}{p(x_t \mid z_t)}p(z_{t-1}\mid x_{<t}).
-$$
-We can use the matrix form of generalized softmax to speed up this computation.
-Let $[\mathbf{f}_t]_{z_t} = p(x_t\mid z_t), [\bm\alpha_t]_{z_{t-1}} = p(z_{t-1}\mid x_{<t})$ in
-$$\Es{z_t\mid x_{<t}}{p(x_t\mid z_t)}=(\bm\alpha_t\circ \mathbf{d})^\top\phi(U)\phi(V)^\top\mathbf{f}_t,$$
-where $\mathbf{d} = \frac{1}{\phi(U)\sum_z\phi(\bv_z)}\in\R^{|\mcZ|}$.
+again yielding $O(T|\mcZ|\dim(\mathbb{F}))$ computation for computing the evidence.
 
 
 \section{Kernel Approximations}
