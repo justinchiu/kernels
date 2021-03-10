@@ -357,10 +357,13 @@ $$
 again yielding $O(T|\mcZ|\dim(\mathbb{F}))$ computation for computing the evidence.
 
 However, the similarities between our work and KBP end there.
-While KBP focuses on using the kernel matrix representation for nonparametric inference,
-we eschew the explicit kernel representation and
+KBP focuses on using the kernel matrix representation for nonparametric inference
+in non-gaussian graphical models where exact computation of conditional expectations is
+infeasible.
+We eschew the explicit kernel representation and
 instead use the inner product in feature space explicitly in order to get
-computational speedups.
+computational speedups,
+which is made possible by the tractability of the conditional expectation.
 
 \section{Kernel Approximations}
 Move to appendix
