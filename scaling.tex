@@ -324,7 +324,7 @@ We give the full parameterization of all distributions in the appendix.
 by optimizing the evidence with gradient ascent.
 
 \subsection{Connection to Kernel Mean Embeddings and Kernel Belief Propagation}
-Kernel belief propagation, as well as the line of research that uses kernel mean embeddings,
+Kernel belief propagation (KBP), as well as the line of research that uses kernel mean embeddings,
 rely on the kernel trick to compute conditional expectations.
 In particular, the system of equations in parallel belief propagation can be
 rewritten so that the messages are conditional expectations.
@@ -356,6 +356,11 @@ p(x) = \prod_t p(x_t \mid x_{<t}),
 $$
 again yielding $O(T|\mcZ|\dim(\mathbb{F}))$ computation for computing the evidence.
 
+However, the similarities between our work and KBP end there.
+While KBP focuses on using the kernel matrix representation for nonparametric inference,
+we eschew the explicit kernel representation and
+instead use the inner product in feature space explicitly in order to get
+computational speedups.
 
 \section{Kernel Approximations}
 Move to appendix
