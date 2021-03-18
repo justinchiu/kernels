@@ -417,15 +417,15 @@ instance of attn}
 
 Both of the above examples assume the mean parameters are known,
 which requires parametric assumptions on the random variable $x$.
-This can be extended to the nonparametric setting by estimating the
+\footnote{This can be extended to the nonparametric setting by estimating the
 kernel mean embedding via samples,
-$\mu_x = \E{\phi(x)} \approx \frac{1}{n}\sum_{i=1}^n \phi(x_i), x_i\iid p(x)$.
+$\mu_x = \E{\phi(x)} \approx \frac{1}{n}\sum_{i=1}^n \phi(x_i), x_i\iid p(x)$.}
 
 We can then extend the kernel mean embedding to the conditional setting
 by introducing covariance operators, which offer an alternative
 representation for covariance using Hilbert spaces \citep{baker1970,baker1973}.
-Given $\mcX$ and $\mcY$-valued RVs $x,y$, and associate with them
-RKHS $\mathbb{F}_x,\mathbb{F}_y$ and respective feature mappings
+Given $\mcX$ and $\mcY$-valued RVs $x,y$, associated
+RKHS $\mathbb{F}_x,\mathbb{F}_y$, and respective feature mappings
 $\phi_x:\mcX\to\mathbb{F}_x,\phi_y:\mcY\to\mathbb{F}_y$.
 We omit the feature mapping subscripts when they are clear from context.
 Let the outer product $(g \otimes h)f = \langle f,h\rangle g$ for elements
@@ -527,6 +527,10 @@ The improved efficiency of generalized softmax comes from directly parameterizin
 the conditional distribution $p(y\mid x)$.
 
 (End current progress)
+Is there a one sentence answer as to why we cannot estimate $p(y|x)$ with kernels directly?
+Something like, in general it is hard to model conditional expectations, but
+generalized softmax makes a particular assumption (tractable partition function)
+that makes it easy.
 
 \section{Comparison with Performer}
 Scaling factor of performer versus ours (length vs num features / embedding dimension).
