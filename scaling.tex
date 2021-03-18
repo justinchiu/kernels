@@ -199,7 +199,7 @@ p(z_t \mid z_{t-1}) = \frac{K(\bu_{z_{t-1}}, \bv_{z_t})}{\sum_{z'} K(\bu_{z_{t-1
 \end{equation}
 where we again have embeddings $\bu_{z_{t-1}},\bv_{z_t}\in\R^d$.\footnote{
 The term generalized softmax is inspired by generalized linear models,
-which generalized linear models to non-gaussian errors with a link function,
+which generalized linear models to non-Gaussian errors with a link function,
 similar to the use of kernels in generalized softmax.
 }
 
@@ -323,14 +323,219 @@ We give the full parameterization of all distributions in the appendix.
 }
 by optimizing the evidence with gradient ascent.
 
-\subsection{Connection to Kernel Mean Embeddings and Kernel Belief Propagation}
-Kernel belief propagation (KBP), based on a line of research that uses kernel mean embeddings,
-rely on the kernel trick to compute conditional expectations.
-In particular, the messages in belief propagation can be
-written as conditional expectations.
-The messages in KBP take a non-standard form.
+\section{Connection to Kernel Mean Embeddings and Kernel Belief Propagation}
+Belief propagation is commonly constrained to models with parametric assumptions such as
+small, discrete or Gaussian conditional distributions.
+Kernel belief propagation (KBP) is a method that utilizes reproducing kernels
+to run inference without the common parametric assumptions.
+At a high level, KBP rewrites the messages in belief propagation as conditional
+expectations, then applies kernel-based conditional embedding operators
+to approximate the conditional expectations nonparametrically.
+While generalized softmax relies on a discrete conditional distribution and low-dimensional
+feature space, KBP instead relies on the kernel trick, which uses the explicit kernel
+matrices constructed using the closed form equation of the kernel.
 
-Introduce covariance operators, which are useful without a parametric form.
+In this section, we will derive the kernel conditional embedding operator
+used in KBP and compare it to generalized softmax.
+However, before covering the conditional embedding operator, we first
+detail the kernel mean embedding.
+Rather than computing conditional expectations,
+the simpler kernel mean embedding computes unconditional expectations.
+The kernel mean embedding extends the reproducing property,
+which says that function application can be expressed as an inner product,
+by showing that the expected values of functions of $x$ can also
+be computed via inner products.
+
+Given a nonnegative kernel function $k:\mcX\times\mcX\to\R_+$,\footnote{
+A strictly positive kernel function must have the finitely positive semidefinite
+kernel matrix property, allowing us to apply the Moore-Aronszajn theorem,
+which constructively guarantees the existence of an associated RKHS.
+}
+there exists an associated reproducing kernel Hilbert space (RKHS) $\mathbb{F}$
+which we call the feature space.\footnote{
+Check if we need separability.
+}
+The RKHS has a feature mapping, $\phi:\mcX\to\mathbb{F}$,
+such that, for all functions $f\in\mathbb{F}$,
+function application can be expressed with the inner product
+$\langle\cdot,\cdot\rangle_\mathbb{F}:\mathbb{F}\times\mathbb{F}\to\R_+$:
+$$f(x) = \langle f, \phi(x)\rangle_\mathbb{F}.$$
+\footnote{
+Show reproducing property does not hold for $L_2$?
+This is known as the reproducing property of $\phi(x)\in\mathbb{F}$.
+Terminology of reproducing property vs point evaluation property is murky.
+Pick one and stay consistent.
+}
+We will omit the space associated with the inner product when it is clear from context.
+
+The kernel mean embedding \citep{smola2007} $\mu_x\in\mathbb{F}$
+associated with the $\mcX$-valued random variable $x$
+is defined as
+\begin{equation}
+\label{eqn:kme}
+\mu_x = \Es{x}{\phi(x)}.
+\end{equation}
+It has the property that, for all $f \in \mathbb{F}$,
+\begin{equation}
+\label{eqn:expectation-inner-product}
+\Es{x}{f(x)}
+= \Es{x}{\langle f, \phi(x)\rangle}
+= \langle f, \Es{x}{\phi(x)}\rangle
+= \langle f, \mu_x \rangle
+\end{equation}
+by the reproducing property and linearity of expectation.
+(to be super rigorous i think you have to show expectation is a self-adjoint linear operator)
+This extends the reproducing property,
+which says that function application can be expressed as an inner product,
+by showing that the expected values of functions of $x$ can also
+be computed via inner products. (repeated)
+
+\textbf{Example}
+Let $x\sim N(\mu, \Sigma)$ be a $d$-dimensional Gaussian,
+feature mapping $\phi(x) = x,$
+and inner product $\langle x, y\rangle = x^\top y$.
+The kernel mean embedding of $x$ is given by $\mu_x = \Es{x}{\phi(x)} = \mu$.
+Let function $f(x) = w^\top x,$ with $w\in\R^d$.
+We then have $\Es{x}{f(x)} = \langle w, \mu_x \rangle = w^\top \mu$.
+
+\textbf{Example}
+Let $x\sim \textrm{Cat}(\theta)$ be a $d$-dimensional categorical distribution,
+the one-hot feature mapping $\phi(x) = e_x\in\R^d,$
+and inner product $\langle x, y\rangle = x^\top y$.
+The kernel mean embedding of $x$ is then given by $\mu_x = \E{\phi(x)} = \theta$.
+We can then model a single instance of attention as an expectation under this framework.
+Let the function $f(x) = \bu_x\in\R^n$ map values of $x$ to their corresponding embedding.
+With some abuse of notation,
+given the stacked $f = [\bu_1, \bu_2, \ldots, \bu_d] \in \R^{d\times n}$,
+where $n$ is the embedding dimension,
+we then have
+$\Es{x}{f(x)} = \langle f, \mu_x\rangle = f^\top\theta$.\footnote{
+The expectation is applied to each dimension of the codomain of $f$ separately.
+}
+\todo{Make sure notation is consistent}
+\todo{Also clarify that no speedups are possible here due to only a single
+instance of attn}
+
+Both of the above examples assume the mean parameters are known,
+which requires parametric assumptions on the random variable $x$.
+This can be extended to the nonparametric setting by estimating the
+kernel mean embedding via samples,
+$\mu_x = \E{\phi(x)} \approx \frac{1}{n}\sum_{i=1}^n \phi(x_i), x_i\iid p(x)$.
+
+We can then extend the kernel mean embedding to the conditional setting
+by introducing covariance operators, which offer an alternative
+representation for covariance using Hilbert spaces \citep{baker1970,baker1973}.
+Given $\mcX$ and $\mcY$-valued RVs $x,y$, and associate with them
+RKHS $\mathbb{F}_x,\mathbb{F}_y$ and respective feature mappings
+$\phi_x:\mcX\to\mathbb{F}_x,\phi_y:\mcY\to\mathbb{F}_y$.
+We omit the feature mapping subscripts when they are clear from context.
+Let the outer product $(g \otimes h)f = \langle f,h\rangle g$ for elements
+$f,h\in\mathbb{F}_x$ and $g\in\mathbb{F}_y$.
+The uncentered cross-covariance operator $C_{yx}: \mathbb{F}_x\to\mathbb{F}_y$ is defined by
+\begin{equation}
+    \label{eqn:xcov}
+    C_{yx} = \Es{yx}{\phi_y(y)\otimes\phi_x(x)}
+\end{equation}
+for all $f\in\mathbb{H},g\in\mathbb{G}$ where $\mathbb{H},\mathbb{G}$ are
+RKHSs over $\mcX,\mcY$.\footnote{
+The uncentered terminology is a result of the definition of the (centered) cross-covariance
+as $E{(x - \E{x})(y - \E{y})} = \E{x\otimes y} - \E{x}\E{y}^\top$,
+and the uncentered cross-covariance $\E{x\otimes y}$.
+}\todo{different symbol for feature mapping for $y$}
+The uncentered cross-covariance operator has the following property:
+\begin{equation}
+    \label{eqn:xcove}
+    \begin{aligned}
+    \langle g, C_{yx}f\rangle
+    &= \langle g, \E{(\phi(y)\otimes\phi(x))}f\rangle && \text{(defn. of }C_{yx})\\
+    &= \E{\langle g, (\phi(y)\otimes\phi(x))f\rangle} && \text{(linearity of expectation)}\\
+    &= \E{\langle g, \langle f, \phi(x)\rangle \phi(y)\rangle} && \text{(defn of }\otimes)\\
+    &= \E{\langle f, \phi(x)\rangle\langle g, \phi(y)\rangle} && \text{(linearity of }\langle\cdot,\cdot\rangle)\\
+    &= \Es{xy}{f(x)g(y)}, && \text{(reproducing property)}
+    \end{aligned}
+\end{equation}
+which is an extension of the kernel mean embedding to a joint distribution.
+The operator $C_{xx}:\mathbb{F}_x\to\mathbb{F}_x$ is called the covariance operator,
+as it takes the form $C_{xx} = \Es{x}{\phi(x)\otimes\phi(x)}$.
+
+\textbf{Example}
+Let $(x,y)\sim N(0,\Sigma)$ bivariate Gaussian,
+where $\Sigma_{xy} = \E{x \otimes y}$, the off-diagonal
+block of the covariance matrix.
+If we take $\mathbb{F}_x=\mathbb{F}_y=\R^d$
+with $\phi_x,\phi_y$ as the identity functions,
+then $C_{xy} = \Sigma_{xy}$.
+
+Given the cross-covariance and covariance operators, $C_{yx}$ and $C_{xx}$,
+we can now define the conditional embedding operator.
+The conditional embedding operator uses the above covariance operators in a manner
+similar to computing conditional probabilities via Bayes' rule: $p(y\mid x) = p(y,x)/p(x)$.
+We define the conditional embedding operator $U_{y\mid x}: \mathbb{F}_x\to\mathbb{F}_y$
+as follows:
+\begin{equation}
+    \label{eqn:conditional-mean}
+    U_{y\mid x} = C_{yx}C_{xx}^{-1}.
+\end{equation}
+The conditional embedding operator allows conditional expectations to be
+expressed as inner products.
+For all $g \in \mathbb{F}_y$,
+\begin{equation}
+\label{eqn:conditional-expectation}
+\langle g, U_{y\mid x}\phi(x) \rangle = \Es{y\mid x}{g(y)}.
+\end{equation}
+The correctness of this property can be shown as follows:
+First, we apply the property of the covariance operator derived in
+Equation~\ref{eqn:xcove}. For all $f\in\mathbb{F}_x$, we have
+\begin{equation}
+\label{eqn:prf-conditional-expectation}
+    \langle f, C_{xx}\Es{y\mid x}{g(y)}\rangle
+    = \Es{x}{f(x)\Es{y\mid x}{g(y)\mid x}}
+    = \Es{xy}{f(x)g(y)}
+    = \langle f, C_{xy}g\rangle.
+\end{equation}
+With some care,\footnote{
+See the appendix of \citet{fukumizu2004kernel} for the full proof}
+we can then multiply the second terms of the inner products on both sides
+of the equation by the left inverse $C_{xx}^{-1}$.
+This gives, forall $f\in\mathbb{F}_x$,
+$$\langle f, \Es{y\mid x}{g(y)}\rangle = \langle f, C_{xx}^{-1}C_{xy}g \rangle
+= \langle g, C_{yx}C_{xx}^{-1}f\rangle.$$
+As this holds for any $f\in\mathbb{F}_x$, it also holds for $\phi_x$,
+yielding
+$$
+\Es{y\mid x}{g(y)} = \langle g, U_{y\mid x}\phi(x)\rangle
+$$
+as desired, by the reproducing property.
+
+\textbf{Example}
+We return the attention example, except with 
+
+\section{Comparison with Performer}
+Scaling factor of performer versus ours (length vs num features / embedding dimension).
+
+Performer (protein): num features = 256, emb dim = 512, length = 12k?
+MSE graph.
+Performer (toy mse): num features = 128, emb dim = 16, length = 4096?
+HMM: num features = length / 4, emb dim = 256
+
+Performer and random feature attention find that num features does not scale with
+length. How can we explain this?
+
+Quote from performer:
+`The dependence on the radius means that the length of queries and keys cannot grow
+at a fixed number of features if we want to
+retain the quality of the approximation.
+In particular, this means that FAVOR cannot approximate
+hard attention on sequences of unlimited length with a fixed number of features.'
+Poorly written.
+Interpretation: Random projections from embedding space to sphere.
+If we increase the number of points in embedding space while keeping
+their projections separated, we have to increase the volume of the sphere.
+
+Question: why dont they see that in their experiments?
+Possibly get away with a low degree of separation.
+
+Explain argument from separation to entropy or rank.
 
 \begin{equation}
 1 = 2
@@ -367,12 +572,18 @@ again yielding $O(T|\mcZ|\dim(\mathbb{F}))$ computation for computing the eviden
 
 However, the similarities between our work and KBP end there.
 KBP focuses on using the kernel matrix representation for nonparametric inference
-in non-gaussian graphical models where exact computation of conditional expectations is
+in non-Gaussian graphical models where exact computation of conditional expectations is
 infeasible.
 We eschew the explicit kernel representation and
 instead use the inner product in feature space explicitly in order to get
 computational speedups,
 which is made possible by the tractability of the conditional expectation.
+
+
+\subsection{Attention vs Cat}
+$$p(y\mid x) = \Es{y\mid x}{1(x,y)}$$
+$$[]_i = \Es{x}{\bu_x}_i$$
+
 
 \section{Kernel Approximations}
 Move to appendix
