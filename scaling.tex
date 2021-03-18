@@ -368,7 +368,7 @@ Pick one and stay consistent.
 }
 We will omit the space associated with the inner product when it is clear from context.
 
-The kernel mean embedding \citep{smola2007} $\mu_x\in\mathbb{F}$
+The kernel mean embedding \citep{smola2007}, $\mu_x\in\mathbb{F}$,
 associated with the $\mcX$-valued random variable $x$
 is defined as
 \begin{equation}
@@ -466,6 +466,13 @@ If we take $\mathbb{F}_x=\mathbb{F}_y=\R^d$
 with $\phi_x,\phi_y$ as the identity functions,
 then $C_{xy} = \Sigma_{xy}$.
 
+\textbf{Example}
+Let $(x,y)\sim p(x,y)$, a discrete joint distribution,
+with $\phi(x)=e_x,\phi(y)=e_y$ both mapping $x,y$ to one-hot representations.
+This results in $[C_{xy}]_{x,y}=p(x,y)$.
+If we let $1_x,1_y$ be indicator functions for particular values of $x$ and $y$,
+then $\langle 1_x, C_{xy}1_y\rangle = \langle C_{yx}1_x, 1_y\rangle= p(x,y)$.
+
 Given the cross-covariance and covariance operators, $C_{yx}$ and $C_{xx}$,
 we can now define the conditional embedding operator.
 The conditional embedding operator uses the above covariance operators in a manner
@@ -508,7 +515,19 @@ $$
 as desired, by the reproducing property.
 
 \textbf{Example}
-We return the attention example, except with 
+Consider discrete RVs $x$ and $y$, with $y\sim p(y\mid x)$.
+We would like to compute $\Es{y\mid x}{g(y)}$ using the conditional embedding operator.
+Assuming $\mathbb{F}_x,\mathbb{F}_y$ both have finite dimension $d$,
+with inner products $\langle\cdot,\cdot\rangle=\cdot^\top\cdot$,
+$$\Es{y\mid x}{g(y)} = g^\top U_{y\mid x}\phi(x) = g^\top C_{yx}C_{xx}^{-1}\phi(x).$$
+With this representation, it takes computation $O((|\mcY|+|\mcX|)d^2)$
+to compute $C_{yx}$ and $C_{xx}$ and $O(d^3)$ to invert $C_{xx}$.
+This is more expensive than generalized softmax
+which takes $O((|\mcY|+|\mcX|)d)$ computation,
+since with the generalized softmax we directly parameterize the conditional distribution
+$p(y\mid x)$.
+
+(End current progress)
 
 \section{Comparison with Performer}
 Scaling factor of performer versus ours (length vs num features / embedding dimension).
