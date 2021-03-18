@@ -331,9 +331,8 @@ to run inference without the common parametric assumptions.
 At a high level, KBP rewrites the messages in belief propagation as conditional
 expectations, then applies kernel-based conditional embedding operators
 to approximate the conditional expectations nonparametrically.
-While generalized softmax relies on a discrete conditional distribution and low-dimensional
-feature space, KBP instead relies on the kernel trick, which uses the explicit kernel
-matrices constructed using the closed form equation of the kernel.
+While generalized softmax can be used to directly parameterize conditional distributions,
+KBP instead relies on feature space operators in a manner that resembles Bayes' rule.
 
 In this section, we will derive the kernel conditional embedding operator
 used in KBP and compare it to generalized softmax.
@@ -522,10 +521,10 @@ with inner products $\langle\cdot,\cdot\rangle=\cdot^\top\cdot$,
 $$\Es{y\mid x}{g(y)} = g^\top U_{y\mid x}\phi(x) = g^\top C_{yx}C_{xx}^{-1}\phi(x).$$
 With this representation, it takes computation $O((|\mcY|+|\mcX|)d^2)$
 to compute $C_{yx}$ and $C_{xx}$ and $O(d^3)$ to invert $C_{xx}$.
-This is more expensive than generalized softmax
-which takes $O((|\mcY|+|\mcX|)d)$ computation,
-since with the generalized softmax we directly parameterize the conditional distribution
-$p(y\mid x)$.
+This is more expensive than generalized softmax,
+which takes $O((|\mcY|+|\mcX|)d)$ computation.
+The improved efficiency of generalized softmax comes from directly parameterizing
+the conditional distribution $p(y\mid x)$.
 
 (End current progress)
 
