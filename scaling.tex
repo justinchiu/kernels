@@ -417,8 +417,8 @@ $\Es{x}{f(x)} = \langle f, \mu_x\rangle = f^\top\theta$.\footnote{
 The expectation is applied to each dimension of the codomain of $f$ separately.
 }
 \todo{Make sure notation is consistent}
-\todo{Also clarify that no speedups are possible here due to only a single
-instance of attn}
+\todo{Also potentially clarify that no speedups are possible here due to only a single
+instance of attn. Performer/RFA relies on conditional expectation}
 
 Both of the above examples assume the mean parameters are known,
 which requires parametric assumptions on the random variable $x$.
@@ -438,7 +438,7 @@ $f,h\in\mathbb{F}_x$ and $g\in\mathbb{F}_y$.
 The uncentered cross-covariance operator $C_{yx}: \mathbb{F}_x\to\mathbb{F}_y$ is defined by
 \begin{equation}
     \label{eqn:xcov}
-    C_{yx} = \Es{yx}{\phi_y(y)\otimes\phi_x(x)}
+    C_{yx} = \Es{yx}{\phi_y(y)\otimes\phi_x(x)},
 \end{equation}
 for all $f\in\mathbb{H},g\in\mathbb{G}$ where $\mathbb{H},\mathbb{G}$ are
 RKHSs over $\mcX,\mcY$.\footnote{
@@ -451,7 +451,7 @@ The uncentered cross-covariance operator has the following property:
     \label{eqn:xcove}
     \begin{aligned}
     \langle g, C_{yx}f\rangle
-    &= \langle g, \E{(\phi(y)\otimes\phi(x))}f\rangle && \text{(defn. of }C_{yx})\\
+    &= \langle g, \E{(\phi(y)\otimes\phi(x))}f\rangle && \text{(defn of }C_{yx})\\
     &= \E{\langle g, (\phi(y)\otimes\phi(x))f\rangle} && \text{(linearity of expectation)}\\
     &= \E{\langle g, \langle f, \phi(x)\rangle \phi(y)\rangle} && \text{(defn of }\otimes)\\
     &= \E{\langle f, \phi(x)\rangle\langle g, \phi(y)\rangle} && \text{(linearity of }\langle\cdot,\cdot\rangle)\\
@@ -521,13 +521,16 @@ as desired, by the reproducing property.
 \textbf{Example}
 Consider discrete RVs $x$ and $y$, with $y\sim p(y\mid x)$.
 We would like to compute $\Es{y\mid x}{g(y)}$ using the conditional embedding operator.
-Assuming $\mathbb{F}_x,\mathbb{F}_y$ both have finite dimension $d$,
-with inner products $\langle\cdot,\cdot\rangle=\cdot^\top\cdot$,
+Assuming $\mathbb{F}_x=\mathbb{F}_y=\R^d$,
+with inner products
+$\langle\cdot,\cdot\rangle_{\mathbb{F}_x}=\langle\cdot,\cdot\rangle_{\mathbb{F}_x}$
+both equal to the dot product,
+the conditional expectation is given by
 $$\Es{y\mid x}{g(y)} = g^\top U_{y\mid x}\phi(x) = g^\top C_{yx}C_{xx}^{-1}\phi(x).$$
 With this representation, it takes computation $O((|\mcY|+|\mcX|)d^2)$
 to compute $C_{yx}$ and $C_{xx}$ and $O(d^3)$ to invert $C_{xx}$.
 This is more expensive than generalized softmax,
-which takes $O((|\mcY|+|\mcX|)d)$ computation.
+which takes $O(|\mcY|d)$ computation.
 The improved efficiency of generalized softmax comes from directly parameterizing
 the conditional distribution $p(y\mid x)$.
 
