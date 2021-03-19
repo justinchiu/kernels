@@ -540,37 +540,6 @@ Something like, in general it is hard to model conditional expectations, but
 generalized softmax makes a particular assumption (tractable partition function,
 closed form expression for mean) that makes it easy.
 
-\section{Comparison with Performer}
-Scaling factor of performer versus ours (length vs num features / embedding dimension).
-
-Performer (protein): num features = 256, emb dim = 512, length = 12k?
-MSE graph.
-Performer (toy mse): num features = 128, emb dim = 16, length = 4096?
-HMM: num features = length / 4, emb dim = 256
-
-Performer and random feature attention find that num features does not scale with
-length. How can we explain this?
-
-Quote from performer:
-`The dependence on the radius means that the length of queries and keys cannot grow
-at a fixed number of features if we want to
-retain the quality of the approximation.
-In particular, this means that FAVOR cannot approximate
-hard attention on sequences of unlimited length with a fixed number of features.'
-Poorly written.
-Interpretation: Random projections from embedding space to sphere.
-If we increase the number of points in embedding space while keeping
-their projections separated, we have to increase the volume of the sphere.
-
-Question: why dont they see that in their experiments?
-Possibly get away with a low degree of separation.
-
-Explain argument from separation to entropy or rank.
-
-\begin{equation}
-1 = 2
-\end{equation}
-
 Similarly, inference in an HMM can also be written with conditional expectations.
 At each timestep, the forward algorithm recursively computes the quantity
 \begin{equation}
@@ -609,20 +578,34 @@ instead use the inner product in feature space explicitly in order to get
 computational speedups,
 which is made possible by the tractability of the conditional expectation.
 
+\section{Random Fourier Features}
+Scaling factor of performer versus ours (length vs num features / embedding dimension).
 
-\subsection{Attention vs Cat}
-$$p(y\mid x) = \Es{y\mid x}{1(x,y)}$$
-$$[]_i = \Es{x}{\bu_x}_i$$
+Performer (protein): num features = 256, emb dim = 512, length = 12k?
+MSE graph.
+Performer (toy mse): num features = 128, emb dim = 16, length = 4096?
+HMM: num features = length / 4, emb dim = 256
 
+Performer and random feature attention find that num features does not scale with
+length. How can we explain this?
 
-\section{Kernel Approximations}
-Move to appendix
+Quote from performer:
+`The dependence on the radius means that the length of queries and keys cannot grow
+at a fixed number of features if we want to
+retain the quality of the approximation.
+In particular, this means that FAVOR cannot approximate
+hard attention on sequences of unlimited length with a fixed number of features.'
+Poorly written.
+Interpretation: Random projections from embedding space to sphere.
+If we increase the number of points in embedding space while keeping
+their projections separated, we have to increase the volume of the sphere.
 
-Taylor approximation, generating functions
+Question: why dont they see that in their experiments?
+Possibly get away with a low degree of separation.
 
-limitations?
-\subsection{Bochner Theorem}
-\subsection{Nystrom}
+Explain argument from separation to entropy or rank.
+
+\section{Emission Sparsity Constraints}
 
 \section{Efficient Sampling}
 
