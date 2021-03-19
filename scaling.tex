@@ -332,7 +332,7 @@ to run inference without the common parametric assumptions \citep{song2010tree,s
 At a high level, KBP rewrites the messages in belief propagation as conditional
 expectations, then applies kernel-based conditional embedding operators
 to approximate the conditional expectations nonparametrically.
-While generalized softmax can be used to directly parameterize conditional distributions,
+Whereas generalized softmax can be used to directly parameterize conditional distributions,
 KBP instead relies on feature space operators in a manner that resembles Bayes' rule.
 The generality of KBP comes at a cost: in order to avoid parametric assumptions
 the operations in KBP are much more expensive than generalized softmax.
@@ -357,19 +357,20 @@ there exists an associated reproducing kernel Hilbert space (RKHS) $\mathbb{F}$
 which we call the feature space.\footnote{
 Check if we need separability.
 }
-The RKHS has a feature mapping, $\phi:\mcX\to\mathbb{F}$,
+The RKHS has a feature mapping, $\phi_x:\mcX\to\mathbb{F}$,
 such that, for all functions $f\in\mathbb{F}$,
 function application can be expressed with the inner product
 $\langle\cdot,\cdot\rangle_\mathbb{F}:\mathbb{F}\times\mathbb{F}\to\R_+$:
-$$f(x) = \langle f, \phi(x)\rangle_\mathbb{F}.$$
+$$f(x) = \langle f, \phi_x(x)\rangle_\mathbb{F}.$$
 \footnote{
 Show reproducing property does not hold for $L_2$?
 This is known as the reproducing property of $\phi(x)\in\mathbb{F}$.
 Terminology of reproducing property vs point evaluation property is murky.
 Pick one and stay consistent.
 }
-This is the reproducing property.
-We will omit the space associated with the inner product when it is clear from context.
+This is known as the reproducing property.
+We will omit the space associated with the inner product as
+well as the subscript of the feature mapping when it is clear from context.
 
 The kernel mean embedding \citep{smola2007}, $\mu_x\in\mathbb{F}$,
 associated with the $\mcX$-valued random variable $x$
