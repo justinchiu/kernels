@@ -473,8 +473,8 @@ then $C_{xy} = \Sigma_{xy}$.
 Let $(x,y)\sim p(x,y)$, a discrete joint distribution,
 with $\phi(x)=e_x,\phi(y)=e_y$ both mapping $x,y$ to one-hot representations.
 This results in $[C_{xy}]_{x,y}=p(x,y)$.
-If we let $1_x,1_y$ be indicator functions for particular values of $x$ and $y$,
-then $\langle 1_x, C_{xy}1_y\rangle = \langle C_{yx}1_x, 1_y\rangle= p(x,y)$.
+If we also let $f=e_{x'},g=e_{y'}$ be one-hot representations of particular values of $x$ and $y$,
+then $\langle f, C_{xy}g\rangle = \langle C_{yx}f, g\rangle= p(x=x',y=y')$.
 
 Given the cross-covariance and covariance operators, $C_{yx}$ and $C_{xx}$,
 we can now define the conditional embedding operator.
