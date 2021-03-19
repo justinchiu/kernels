@@ -324,6 +324,7 @@ We give the full parameterization of all distributions in the appendix.
 by optimizing the evidence with gradient ascent.
 
 \section{Connection to Kernel Mean Embeddings and Kernel Belief Propagation}
+A related line of work uses kernel methods to extend belief propagation.
 Belief propagation is commonly constrained to models with parametric assumptions such as
 small, discrete or Gaussian conditional distributions.
 Kernel belief propagation (KBP) is a method that utilizes reproducing kernels
@@ -333,6 +334,8 @@ expectations, then applies kernel-based conditional embedding operators
 to approximate the conditional expectations nonparametrically.
 While generalized softmax can be used to directly parameterize conditional distributions,
 KBP instead relies on feature space operators in a manner that resembles Bayes' rule.
+The generality of KBP comes at a cost: in order to avoid parametric assumptions
+the operations in KBP are much more expensive than generalized softmax.
 
 In this section, we will derive the kernel conditional embedding operator
 used in KBP and compare it to generalized softmax.
@@ -530,8 +533,8 @@ the conditional distribution $p(y\mid x)$.
 (End current progress)
 Is there a one sentence answer as to why we cannot estimate $p(y|x)$ with kernels directly?
 Something like, in general it is hard to model conditional expectations, but
-generalized softmax makes a particular assumption (tractable partition function)
-that makes it easy.
+generalized softmax makes a particular assumption (tractable partition function,
+closed form expression for mean) that makes it easy.
 
 \section{Comparison with Performer}
 Scaling factor of performer versus ours (length vs num features / embedding dimension).
