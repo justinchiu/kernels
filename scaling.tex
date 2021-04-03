@@ -330,16 +330,16 @@ small, discrete or Gaussian conditional distributions.
 Kernel belief propagation (KBP) is a method that utilizes reproducing kernels
 to run inference without the common parametric assumptions \citep{song2010tree,song2011kernelbp}.
 At a high level, KBP rewrites the messages in belief propagation as conditional
-expectations, then applies kernel-based conditional embedding operators
+expectations, then applies kernel-based conditional mean operators
 to approximate the conditional expectations nonparametrically.
 Whereas generalized softmax can be used to directly parameterize conditional distributions,
 KBP instead relies on feature space operators in a manner that resembles Bayes' rule.
 The generality of KBP comes at a cost: in order to avoid parametric assumptions
-the operations in KBP are much more expensive than generalized softmax.
+the operations in KBP are more expensive than generalized softmax.
 
-In this section, we will derive the kernel conditional embedding operator
+In this section, we will derive the kernel conditional mean operator
 used in KBP and compare it to generalized softmax.
-However, before covering the conditional embedding operator, we first
+However, before covering the conditional mean operator, we first
 detail the kernel mean embedding.
 Rather than computing conditional expectations,
 the simpler kernel mean embedding computes unconditional expectations.
@@ -371,6 +371,7 @@ Pick one and stay consistent.
 We will omit the space associated with the inner product as
 well as the subscript of the feature mapping when it is clear from context.
 
+\subsection{Kernel Mean Embedding}
 The kernel mean embedding \citep{smola2007}, $\mu_x\in\mathbb{F}$,
 associated with the $\mcX$-valued random variable $x$
 is defined as
@@ -425,7 +426,8 @@ which requires parametric assumptions on the random variable $x$.
 kernel mean embedding via samples,
 $\mu_x = \E{\phi(x)} \approx \frac{1}{n}\sum_{i=1}^n \phi(x_i), x_i\iid p(x)$.}
 
-We can then extend the kernel mean embedding to the conditional setting
+\subsection{Conditional Mean Embedding}
+We can then extend the kernel mean embedding to the conditional mean embedding
 by introducing covariance operators, which offer an alternative
 representation for covariance using Hilbert spaces \citep{baker1970,baker1973}.
 Given $\mcX$ and $\mcY$-valued RVs $x,y$, associated
@@ -477,16 +479,16 @@ If we also let $f=e_{x'},g=e_{y'}$ be one-hot representations of particular valu
 then $\langle f, C_{xy}g\rangle = \langle C_{yx}f, g\rangle= p(x=x',y=y')$.
 
 Given the cross-covariance and covariance operators, $C_{yx}$ and $C_{xx}$,
-we can now define the conditional embedding operator.
-The conditional embedding operator uses the above covariance operators in a manner
+we can now define the conditional mean operator.
+The conditional mean operator uses the above covariance operators in a manner
 similar to computing conditional probabilities via Bayes' rule: $p(y\mid x) = p(y,x)/p(x)$.
-We define the conditional embedding operator $U_{y\mid x}: \mathbb{F}_x\to\mathbb{F}_y$
+We define the conditional mean operator $U_{y\mid x}: \mathbb{F}_x\to\mathbb{F}_y$
 as follows:
 \begin{equation}
     \label{eqn:conditional-mean}
     U_{y\mid x} = C_{yx}C_{xx}^{-1}.
 \end{equation}
-The conditional embedding operator allows conditional expectations to be
+The conditional mean operator allows conditional expectations to be
 expressed as inner products.
 For all $g \in \mathbb{F}_y$,
 \begin{equation}
@@ -519,7 +521,7 @@ as desired, by the reproducing property.
 
 \textbf{Example}
 Consider discrete RVs $x$ and $y$, with $y\sim p(y\mid x)$.
-We would like to compute $\Es{y\mid x}{g(y)}$ using the conditional embedding operator.
+We would like to compute $\Es{y\mid x}{g(y)}$ using the conditional mean operator.
 Assuming $\mathbb{F}_x=\mathbb{F}_y=\R^d$,
 with inner products
 $\langle\cdot,\cdot\rangle_{\mathbb{F}_x}=\langle\cdot,\cdot\rangle_{\mathbb{F}_x}$
@@ -603,6 +605,48 @@ Question: why dont they see that in their experiments?
 Possibly get away with a low degree of separation.
 
 Explain argument from separation to entropy or rank.
+
+\section{Structured Sparsity and Low Rank}
+Since we are directly learning a low rank representation of the transition matrix,
+it is impossible to find a higher rank solution.
+If the best solution is of high rank, this is an issue.
+We propose to increase the rank of the generalized softmax transition matrix
+by instead parameterizing the transition matrix with both generalized softmax
+as well as a banded matrix.
+In particular, we decompose the logits into a banded matrix and its complement.
+We denote the entries $(i,j)$ of the matrix within the band by
+\begin{equation}
+\mcS = \set{ (i,j) \mid |i - j| < \delta},
+\end{equation}
+where $\delta$ gives the width of the band,
+and we denote the complement of this set, the off-diagonal elements, by $\mcS^c$.
+We can then compute the key step in inference with
+\begin{equation}
+\begin{aligned}
+p(z_t \mid z_{t-1})
+&= \sum_{z_{t-1}}p(z_t \mid z_{t-1})p(z_{t-1} \mid x_{<t})\\
+&= \left(\sum_{z_{t-1} \in \mcS_{z_t}}p(z_t \mid z_{t-1})
+    + \sum_{z_{t-1}\in\mcS^c_{z_t}}p(z_t \mid z_{t-1})\right)p(z_{t-1} \mid x_{<t})\\
+&= \sum_{z_{t-1} \in \mcS_{z_t}}p(z_t \mid z_{t-1})p(z_{t-1} \mid x_{<t})
+    + \sum_{z_{t-1}\in\mcS^c_{z_t}}p(z_t \mid z_{t-1})p(z_{t-1} \mid x_{<t})\\
+&= \sum_{z_{t-1} \in \mcS_{z_t}}\frac{[\theta]_{z_{t-1},z_{t}}}{Z_{z_{t-1}}}p(z_{t-1} \mid x_{<t})
+    + \sum_{z_{t-1}\in\mcS^c_{z_t}}
+        \frac{\phi(\bu_{z_{t-1}})^\top \phi(\bv_{z_{t}})}{Z_{z_{t-1}}} p(z_{t-1}\mid x_{<t}).
+\end{aligned}
+\end{equation}
+The normalizing constant is given by
+\begin{equation}
+\begin{aligned}
+Z_{z_{t-1}}
+&= \sum_{z_{t-1} \in \mcS_{z_t}} [\theta]_{z_{t-1},z_{t}} + \sum_{z_{t-1}\in\mcS^C_{z_t}}
+    \phi(\bu_{z_{t-1}})^\top \phi(\bv_{z_{t}})\\
+&= \underbrace{\sum_{z_{t-1} \in \mcS_{z_t}} [\theta]_{z_{t-1},z_{t}}}_{Z_B} + 
+    \underbrace{\phi(\bu_{z_{t-1}})^\top \sum_{z_t'\in\mcS^c_{z_t}} \phi(\bv_{z_{t}'})}_{Z_K},
+\end{aligned}
+\end{equation}
+where we denote the contribution to the normalizing constant from the banded matrix as $Z_B$
+and the contribution from kernel generalized softmax as $Z_K$.
+The term $Z_B$ takes $O(|\mcZ|\delta)$ computation, and $Z_K$ takes $O(|\mcZ|\dim(\mathbb{F}))$.
 
 \section{Emission Sparsity Constraints}
 
