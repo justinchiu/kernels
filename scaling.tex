@@ -620,7 +620,9 @@ We denote the entries $(i,j)$ of the matrix within the band by
 \end{equation}
 where $\delta$ gives the width of the band,
 and we denote the complement of this set, the off-diagonal elements, by $\mcS^c$.
-We can then compute the key step in inference with
+We can then decompose the computation performed in the key step in inference
+into an operation over the band plus generalized softmax, and normalize over both.
+It is cumbersome to write this operation in matrix notation, so we write it as follows:
 \begin{equation}
 \begin{aligned}
 p(z_t \mid z_{t-1})
