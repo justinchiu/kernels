@@ -617,10 +617,8 @@ as well as a banded matrix.
 \subsection{Sum of Experts}
 We constrain $\theta\in\R^{|\mcZ|\times|\mcZ|}$ to have banded structure,
 such that $[\theta]_{z_{t-1},z_t} = 0$ if $|z_t - z_{t-1}| > K$.
-Let $B = \set{(z_{t-1}, z_t): |z_t - z_{t-1}| \le K}$,
-with $B_{z_{t}} = \set{z_{t-1}: |z_t - z_{t-1}| \le K}$
-and $B_{z_{t-1}} = \set{z_t: |z_t - z_{t-1}| \le K}$
-(these two are the same by symmetry).
+Let the band $B = \set{(z_{t-1}, z_t) \mid |z_t - z_{t-1}| \le K}$,
+and band segment $B_{z} = \set{z' \mid |z - z'| \le K}$.
 \begin{equation}
 \begin{aligned}
 p(z_t \mid x_{<t})
@@ -644,6 +642,8 @@ Z_{z_{t-1}}
     \underbrace{\phi(\bu_{z_{t-1}})^\top \sum_{z_t} \phi(\bv_{z_{t}})}_{Z_K}.
 \end{aligned}
 \end{equation}
+
+
 
 \subsection{Product of Experts}
 Using the same definition of $\theta$, we can instead use a product of experts parameterization.
