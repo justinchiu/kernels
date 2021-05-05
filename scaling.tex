@@ -70,28 +70,25 @@ We seek to answer the question of whether graphical models can be both
 performant and interpretable.
 
 We use language modeling as a benchmark task, as the complex 
-and sometimes long-range phenomena in natural language provides a good testbed.
-%Additionally, language modeling captures import scientific and linguistic questions.
+and sometimes long-range phenomena in natural language provides a good testbed
+for time-series models.
 Language model benchmarks are currently dominated by autoregressive neural models,
 which makes it difficult to analyze what properties of language the models are
-actually capturing.
+capturing.
 
-In this work, we investigate scaling probabilistic graphical models
-which explicitly reason about latent variables.
+In this work, we investigate scaling probabilistic graphical models.
 We focus on the one of the simplest latent variable models,
 the hidden Markov model (HMM).
 Despite the simplicity of HMMs,
-they are still computationally expensive to scale
-due to the cost of inference.
-In order to scale HMMs, we utilize a kernel-based generalized softmax that greatly
-reduces the complexity of inference.
+they are still computationally expensive due to the cost of inference.
+In order to scale HMMs, we utilize a kernel-based generalized softmax
+that uses a low-rank factorization to greatly reduce the complexity of inference.
 Before diving into the generalized softmax, we first review HMMs.
 
 %In order to scale HMMs, we propose a series of choices in parameterization
 %that result in computational speedups for inference in HMMs:
 %sparse emission constraint, state dropout, and an efficient kernel-based generalized softmax.
 %Before diving into these techniques, we first review HMMs.
-
 
 \section{Hidden Markov Models for Language Modeling}
 Hidden Markov models (HMMs) have a rich history in natural language processing.
@@ -101,6 +98,8 @@ part of speech tagging \citep{merialdo1994tagging},
 and word alignment in machine translation \citep{vogel1996hmm}.
 They have also been used as components in neural models,
 such as in attention \citep{shankar2018posterior}.
+
+
 We focus on applying HMMs to the task of language modeling,
 where the goal is to model the sequence of tokens in a sentence $x = (x_1,\ldots,x_T)$.
 
